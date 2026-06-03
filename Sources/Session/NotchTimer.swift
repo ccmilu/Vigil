@@ -22,10 +22,12 @@ enum NotchStyle {
     /// 例如：刘海 220 + extension 110 → 岛总宽 440。
     static let expandedSideExtension: CGFloat = 110
 
-    /// 折叠态圆环大小
-    static let progressRingSize: CGFloat = 18
-    /// 折叠态圆点大小
-    static let collapsedDotSize: CGFloat = 8
+    /// 折叠态圆环直径
+    static let progressRingSize: CGFloat = 22
+    /// 折叠态圆环描边宽度（Apple Watch 运动圆环感觉，越大越"实"）
+    static let progressRingLineWidth: CGFloat = 4
+    /// 折叠态左端 level 状态图标大小
+    static let levelIconSize: CGFloat = 14
 
     // ===== 手动尺寸（autoDetect=false 时生效）=====
     static let manualCollapsedWidth: CGFloat = 380
@@ -158,7 +160,7 @@ struct NotchView: View {
     private var collapsedWidth: CGFloat {
         if NotchStyle.autoDetect {
             let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
-            let leftW = NotchStyle.collapsedDotSize
+            let leftW = NotchStyle.levelIconSize
             let rightW = NotchStyle.progressRingSize
             let middle = ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra
             return sidePad + leftW + middle + rightW + sidePad
@@ -251,23 +253,37 @@ struct NotchView: View {
         }
     }
 
-    // MARK: 折叠态内容（左端圆点 + 右端进度圆环）
+    // MARK: 折叠态内容（左端 level 图标 + 右端进度圆环）
 
     private var collapsedContent: some View {
         HStack(spacing: 0) {
-            // 左端：level 圆点（露出在物理刘海左侧）
-            Circle()
-                .fill(levelColor)
-                .frame(width: NotchStyle.collapsedDotSize, height: NotchStyle.collapsedDotSize)
+            // 左端：level 状态图标（露出在物理刘海左侧）
+            Image(systemName: levelIconName)
+                .font(.system(size: NotchStyle.levelIconSize, weight: .semibold))
+                .foregroundStyle(levelColor)
+                .frame(width: NotchStyle.levelIconSize + 2)
+                .animation(.easeInOut(duration: 0.18), value: state.level)
             Spacer(minLength: 0)
             // 右端：进度圆环（露出在物理刘海右侧）
             ProgressRing(
                 progress: ringProgress,
                 color: levelColor,
-                size: NotchStyle.progressRingSize
+                size: NotchStyle.progressRingSize,
+                lineWidth: NotchStyle.progressRingLineWidth
             )
         }
         .padding(.horizontal, max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6)
+    }
+
+    /// 折叠态左端的 level 状态图标名（SF Symbol）
+    private var levelIconName: String {
+        switch state.level {
+        case .fully: return "leaf.fill"
+        case .wandering: return "questionmark.circle.fill"
+        case .distracted: return "exclamationmark.triangle.fill"
+        case .idle: return "moon.stars.fill"
+        case nil: return "circle.dashed"
+        }
     }
 
     /// 圆环填充比例：剩余时间 / 总时长
