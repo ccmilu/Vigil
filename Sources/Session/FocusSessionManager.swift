@@ -178,6 +178,9 @@ final class FocusSessionManager: ObservableObject {
         startCountdown(durationSeconds: durationSeconds)
         startTicking()
         DockBadge.setRemaining(seconds: durationSeconds)
+        NotchTimer.shared.update(remaining: TimeInterval(durationSeconds), level: nil)
+        NotchTimer.shared.show()
+        SoundPlayer.shared.play(.start)
 
         return .success(s.id)
     }
@@ -197,6 +200,7 @@ final class FocusSessionManager: ObservableObject {
         stopCountdown()
         stopTicking()
         DockBadge.setRemaining(seconds: nil)
+        NotchTimer.shared.hide()
         phase = .analyzing
 
         let actual = startedAt.map { Int(Date().timeIntervalSince($0)) } ?? 0
@@ -259,6 +263,7 @@ final class FocusSessionManager: ObservableObject {
         self.session = nil
         self.analyzer = nil
         self.startedAt = nil
+        SoundPlayer.shared.play(.complete)
     }
 
     // MARK: - 倒计时
@@ -276,6 +281,10 @@ final class FocusSessionManager: ObservableObject {
                 } else {
                     self.phase = .running(promise: p, remaining: remaining)
                     DockBadge.setRemaining(seconds: Int(remaining))
+                    NotchTimer.shared.update(
+                        remaining: remaining,
+                        level: self.lastAnalysis?.level
+                    )
                 }
             }
         }
@@ -403,9 +412,15 @@ final class FocusSessionManager: ObservableObject {
                 createdAt: result.at,
                 analysisLatencyMs: result.latencyMs
             )
-            // 状态变化打通知
+            // 状态变化打通知 + 提示音 + 全屏遮罩
             if result.hasChanged, level == .distracted {
-                await Notifier.notifyDistraction(reminder: result.ai?.reminder ?? "")
+                let reminder = result.ai?.reminder ?? ""
+                await Notifier.notifyDistraction(reminder: reminder)
+                SoundPlayer.shared.play(.distract)
+                DistractOverlay.shared.present(
+                    reminder: reminder,
+                    promise: session.promise
+                )
             }
         }
         ctx.insert(record)

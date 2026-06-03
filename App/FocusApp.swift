@@ -36,21 +36,33 @@ struct FocusApp: App {
         _sessionMgr = StateObject(wrappedValue: mgr)
     }
 
+    @AppStorage("onboarding.completed") private var onboardingDone = false
+
     var body: some Scene {
         WindowGroup("Focus") {
-            ContentView()
-                .environmentObject(sessionMgr)
-                .environmentObject(providerStore)
-                .environmentObject(appSettings)
-                .frame(minWidth: 560, minHeight: 420)
-                .task {
-                    await Notifier.setUp()
-                    KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
-                        Task { @MainActor in
-                            PromisePanel.show(sessionMgr: sessionMgr)
+            ZStack {
+                ContentView()
+                    .environmentObject(sessionMgr)
+                    .environmentObject(providerStore)
+                    .environmentObject(appSettings)
+                    .frame(minWidth: 560, minHeight: 420)
+                    .task {
+                        await Notifier.setUp()
+                        KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
+                            Task { @MainActor in
+                                PromisePanel.show(sessionMgr: sessionMgr)
+                            }
                         }
                     }
+                if !onboardingDone {
+                    Color.black.opacity(0.001)  // 拦截背后交互
+                        .ignoresSafeArea()
+                    OnboardingView { onboardingDone = true }
+                        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+                        .shadow(radius: 30)
+                        .transition(.opacity)
                 }
+            }
         }
         .windowResizability(.contentSize)
         .modelContainer(modelContainer)

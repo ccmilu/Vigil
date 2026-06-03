@@ -13,12 +13,14 @@ struct SettingsView: View {
                 .tabItem { Label("AI", systemImage: "brain") }
             CaptureTab(settings: settings)
                 .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
+            SoundTab()
+                .tabItem { Label("Sound", systemImage: "speaker.wave.2") }
             StorageTab()
                 .tabItem { Label("Storage", systemImage: "externaldrive") }
             DebugTab(settings: settings)
                 .tabItem { Label("Debug", systemImage: "ladybug") }
         }
-        .frame(minWidth: 640, idealWidth: 680, minHeight: 500, idealHeight: 560)
+        .frame(minWidth: 680, idealWidth: 720, minHeight: 520, idealHeight: 580)
     }
 }
 
@@ -101,6 +103,53 @@ private struct CaptureTab: View {
         }
         .formStyle(.grouped)
         .padding(.bottom, 8)
+    }
+}
+
+private struct SoundTab: View {
+    @State private var enabled = SoundPlayer.shared.isEnabled
+    @State private var volume = SoundPlayer.shared.volume
+    @State private var startName = SoundPlayer.shared.currentName(for: .start)
+    @State private var distractName = SoundPlayer.shared.currentName(for: .distract)
+    @State private var completeName = SoundPlayer.shared.currentName(for: .complete)
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("启用提示音", isOn: $enabled)
+                    .onChange(of: enabled) { _, v in SoundPlayer.shared.isEnabled = v }
+                HStack {
+                    Text("音量")
+                    Slider(value: $volume, in: 0...1)
+                        .onChange(of: volume) { _, v in SoundPlayer.shared.volume = v }
+                    Text("\(Int(volume * 100))%")
+                        .frame(width: 40, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+            }
+            soundRow(label: "开始 session", cue: .start, name: $startName)
+            soundRow(label: "检测到分心", cue: .distract, name: $distractName)
+            soundRow(label: "session 完成", cue: .complete, name: $completeName)
+        }
+        .formStyle(.grouped)
+    }
+
+    private func soundRow(label: String, cue: SoundPlayer.Cue, name: Binding<String>) -> some View {
+        HStack {
+            Text(label)
+                .frame(width: 110, alignment: .leading)
+            Picker("", selection: name) {
+                ForEach(SoundPlayer.availableSystemSounds, id: \.self) {
+                    Text($0).tag($0)
+                }
+            }
+            .labelsHidden()
+            .onChange(of: name.wrappedValue) { _, v in
+                SoundPlayer.shared.setSound(cue, name: v)
+            }
+            Button("试听") { SoundPlayer.shared.play(cue) }
+                .buttonStyle(.bordered)
+        }
     }
 }
 

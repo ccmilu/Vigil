@@ -7,7 +7,7 @@ struct SessionDetailView: View {
     let session: FocusSession
     let onClose: () -> Void
 
-    @State private var selectedRecord: AnalysisRecord?
+    @State private var previewURL: URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -35,7 +35,10 @@ struct SessionDetailView: View {
             }
         }
         .padding(20)
-        .frame(width: 720, height: 560)
+        .frame(width: 760, height: 580)
+        .sheet(item: $previewURL) { url in
+            ScreenshotPreviewSheet(url: url) { previewURL = nil }
+        }
     }
 
     private var header: some View {
@@ -105,6 +108,18 @@ struct SessionDetailView: View {
 
     private func recordRow(_ r: AnalysisRecord) -> some View {
         HStack(alignment: .top, spacing: 8) {
+            // 缩略图：仅在有路径时显示
+            if let url = screenshotURL(r.screenshotLocalPath) {
+                Button { previewURL = url } label: {
+                    AsyncImageThumbnail(url: url, size: CGSize(width: 60, height: 36))
+                }
+                .buttonStyle(.plain)
+            } else {
+                Color.gray.opacity(0.05)
+                    .frame(width: 60, height: 36)
+                    .clipShape(.rect(cornerRadius: 3))
+            }
+
             Text(r.createdAt.formatted(.dateTime.hour().minute().second()))
                 .font(.caption.monospaced())
                 .foregroundStyle(.tertiary)
@@ -134,6 +149,12 @@ struct SessionDetailView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
+    }
+
+    private func screenshotURL(_ relativePath: String?) -> URL? {
+        guard let p = relativePath, !p.isEmpty else { return nil }
+        let url = ScreenshotStore.rootDirectory.appendingPathComponent(p)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     private func levelBadge(_ level: FocusLevel) -> some View {
