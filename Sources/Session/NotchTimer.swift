@@ -29,7 +29,10 @@ enum NotchStyle {
     static let manualExpandedWidth: CGFloat = 440
 
     // ===== 展开态高度（无论 autoDetect 都用这个）=====
-    static let expandedHeight: CGFloat = 120
+    /// 注意：展开态内容会自动加 `menuBarHeight` 顶部 padding 让内容在菜单栏下方显示。
+    /// 所以实际可用内容高 = expandedHeight - menuBarHeight - 14（底部 padding）。
+    /// 例如 150 - 38 - 14 = 98pt 给倒计时 + promise + reminder。
+    static let expandedHeight: CGFloat = 150
 
     // ===== 形状圆角 =====
     /// 顶部 concave 圆角（反向，圆心在外）
@@ -276,6 +279,13 @@ struct NotchView: View {
 
     // MARK: 展开态内容
 
+    /// 展开态时，岛上方 menuBarHeight 范围被物理刘海/菜单栏遮挡，
+    /// 所有可读内容必须放在这条线下方。
+    private var contentTopInset: CGFloat {
+        // 留几 pt 让内容和"刘海下沿"有间距
+        ScreenMetrics.menuBarHeight + 6
+    }
+
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 10) {
@@ -308,7 +318,9 @@ struct NotchView: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .padding(.top, contentTopInset)   // ← 把所有内容推到菜单栏下方
+        .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var levelColor: Color {
