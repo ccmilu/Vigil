@@ -179,7 +179,7 @@ final class FocusSessionManager: ObservableObject {
         startTicking()
         DockBadge.setRemaining(seconds: durationSeconds)
         NotchTimer.shared.update(remaining: TimeInterval(durationSeconds), level: nil)
-        NotchTimer.shared.show(promise: promise)
+        NotchTimer.shared.show(promise: promise, plannedSeconds: durationSeconds)
         SoundPlayer.shared.play(.start)
 
         return .success(s.id)

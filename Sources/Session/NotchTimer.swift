@@ -11,17 +11,21 @@ enum NotchStyle {
     /// 自动检测物理刘海宽度 + 菜单栏高度（推荐）
     static let autoDetect: Bool = true
 
-    /// autoDetect 时，折叠态在物理刘海宽度基础上左右各扩展多少 pt（让内容可见）。
-    /// 物理刘海中央会盖住岛中间区域，所以内容必须放在岛的最左 / 最右端、
-    /// 也就是刘海两侧的扩展区里才能露出。
-    ///
-    /// 例如：刘海宽 220 + extension 80 → 岛总宽 380，左右各 80pt 可见区域。
-    static let collapsedSideExtension: CGFloat = 80
+    /// autoDetect 时，折叠态宽度由内容驱动：
+    /// 总宽 = leftItem(圆点) + (notchWidth + middleExtra) + rightItem(圆环) + 2 × sidePad
+    /// 这个值是"中间预留空白"在物理刘海宽度基础上的额外量。
+    /// 调小 = 岛更紧凑（可能与刘海重叠 → 不影响可见性，因为内容在两端）；
+    /// 调大 = 中间空白更宽。
+    static let collapsedMiddleExtra: CGFloat = 8
 
     /// autoDetect 时，展开态在物理刘海宽度基础上左右各扩展多少 pt。
-    /// 让展开态也跟随机型动态计算，而非硬编码 560pt 这种"在窄刘海机型上看着过宽"。
     /// 例如：刘海 220 + extension 110 → 岛总宽 440。
     static let expandedSideExtension: CGFloat = 110
+
+    /// 折叠态圆环大小
+    static let progressRingSize: CGFloat = 18
+    /// 折叠态圆点大小
+    static let collapsedDotSize: CGFloat = 8
 
     // ===== 手动尺寸（autoDetect=false 时生效）=====
     static let manualCollapsedWidth: CGFloat = 380
@@ -51,7 +55,8 @@ enum NotchStyle {
     // ===== 动画 =====
     static let springResponse: Double = 0.42
     static let springDamping: Double = 0.78
-    static let distractedFlashSeconds: TimeInterval = 6
+    /// distracted 跳变时刘海强制展开的秒数（原 6s 太短看不清 reminder，加长到 18s）
+    static let distractedFlashSeconds: TimeInterval = 18
 
     enum ContentAlignment {
         case leading, trailing, center, split
@@ -65,6 +70,7 @@ final class NotchTimer: ObservableObject {
     static let shared = NotchTimer()
 
     @Published var remaining: TimeInterval = 0
+    @Published var planned: TimeInterval = 0   // 总时长，用于算圆环进度
     @Published var level: FocusLevel? = nil
     @Published var promise: String = ""
     @Published var reasoning: String = ""     // AI 每帧的活动描述
@@ -75,8 +81,9 @@ final class NotchTimer: ObservableObject {
 
     private init() {}
 
-    func show(promise: String) {
+    func show(promise: String, plannedSeconds: Int) {
         self.promise = promise
+        self.planned = TimeInterval(plannedSeconds)
         if window == nil { createWindow() }
         window?.orderFrontRegardless()
     }
@@ -147,10 +154,14 @@ struct NotchView: View {
     @State private var hovering = false
     @State private var now = Date()
 
-    /// 折叠态宽度：autoDetect 时 = 物理刘海宽 + 左右扩展（让内容能露出在刘海两侧）
+    /// 折叠态宽度：内容驱动 — 由实际 left/right 组件 + 刘海中央预留空白决定
     private var collapsedWidth: CGFloat {
         if NotchStyle.autoDetect {
-            return ScreenMetrics.notchWidth + 2 * NotchStyle.collapsedSideExtension
+            let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
+            let leftW = NotchStyle.collapsedDotSize
+            let rightW = NotchStyle.progressRingSize
+            let middle = ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra
+            return sidePad + leftW + middle + rightW + sidePad
         }
         return NotchStyle.manualCollapsedWidth
     }
@@ -240,47 +251,29 @@ struct NotchView: View {
         }
     }
 
-    // MARK: 折叠态内容
+    // MARK: 折叠态内容（左端圆点 + 右端进度圆环）
 
     private var collapsedContent: some View {
-        Group {
-            switch NotchStyle.collapsedContentAlignment {
-            case .leading:
-                HStack { collapsedItem; Spacer() }
-            case .trailing:
-                HStack { Spacer(); collapsedItem }
-            case .center:
-                collapsedItem
-            case .split:
-                HStack(spacing: 0) {
-                    // 左端：level 圆点（在物理刘海左侧的扩展区）
-                    Circle()
-                        .fill(levelColor)
-                        .frame(width: 8, height: 8)
-                    Spacer()
-                    // 右端：倒计时（在物理刘海右侧的扩展区）
-                    Text(formatTime(state.remaining))
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .monospacedDigit()
-                }
-            }
-        }
-        // 贴近岛左右端（避开刘海中央），仅留少量边距让圆角不切到内容
-        .padding(.horizontal, max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 4)
-        .padding(.bottom, 2)
-    }
-
-    private var collapsedItem: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
+            // 左端：level 圆点（露出在物理刘海左侧）
             Circle()
                 .fill(levelColor)
-                .frame(width: 6, height: 6)
-            Text(formatTime(state.remaining))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white)
-                .monospacedDigit()
+                .frame(width: NotchStyle.collapsedDotSize, height: NotchStyle.collapsedDotSize)
+            Spacer(minLength: 0)
+            // 右端：进度圆环（露出在物理刘海右侧）
+            ProgressRing(
+                progress: ringProgress,
+                color: levelColor,
+                size: NotchStyle.progressRingSize
+            )
         }
+        .padding(.horizontal, max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6)
+    }
+
+    /// 圆环填充比例：剩余时间 / 总时长
+    private var ringProgress: Double {
+        guard state.planned > 0 else { return 0 }
+        return max(0, min(1, state.remaining / state.planned))
     }
 
     // MARK: 展开态内容
@@ -383,23 +376,52 @@ struct NotchView: View {
     }
 }
 
+// MARK: - 进度圆环
+
+/// 折叠态右端用的剩余时间圆环。progress 0~1，从满到空逆时针消减。
+struct ProgressRing: View {
+    let progress: Double   // 1 = 满；0 = 空
+    let color: Color
+    let size: CGFloat
+    var lineWidth: CGFloat = 2.4
+
+    var body: some View {
+        ZStack {
+            // 底环（淡色）
+            Circle()
+                .stroke(Color.white.opacity(0.18), lineWidth: lineWidth)
+            // 进度环（从 12 点位置顺时针绘制剩余比例）
+            Circle()
+                .trim(from: 0, to: CGFloat(progress))
+                .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.linear(duration: 0.4), value: progress)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 // MARK: - Preview
 
 #Preview("折叠态 · fully") {
     let state = NotchTimer.shared
     state.remaining = 1234
+    state.planned = 1500
     state.level = .fully
     state.promise = "完成 Focus 项目刘海调优"
+    state.reasoning = "正在 Xcode 编辑 NotchTimer.swift 的圆环组件"
     return NotchView(state: state)
         .background(Color.blue.opacity(0.2))
 }
 
 #Preview("展开态 · distracted") {
     let state = NotchTimer.shared
-    state.remaining = 1234
+    state.remaining = 600
+    state.planned = 1500
     state.level = .distracted
     state.promise = "完成 Focus 项目"
-    state.reminder = "刚才在刷 YouTube；回到工作吧"
+    state.reasoning = "正在浏览 YouTube 推荐视频"
+    state.reminder = "刚才在刷 YouTube；回到调试圆环吧"
     state.forceExpandUntil = Date().addingTimeInterval(60)
     return NotchView(state: state)
         .background(Color.blue.opacity(0.2))
