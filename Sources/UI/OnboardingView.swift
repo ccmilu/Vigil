@@ -80,18 +80,26 @@ struct OnboardingView: View {
         )
     }
 
+    @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+
     private var notificationsPage: some View {
         permissionPage(
             icon: "bell.badge",
             title: "通知权限",
-            description: "走神时 Focus 会用通知 + 提示音把你拉回。",
+            description: notificationStatus == .denied
+                ? "之前选过「不允许」。系统不会再弹原生授权框，请到系统设置 → 通知 → Focus 手动开启。"
+                : "走神时 Focus 会用通知 + 提示音把你拉回。首次会弹原生授权框。",
             granted: notificationGranted,
-            actionTitle: "请求授权",
+            actionTitle: notificationStatus == .denied ? "打开系统设置" : "请求授权",
             action: {
-                Task {
-                    let center = UNUserNotificationCenter.current()
-                    _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
-                    await refreshNotificationStatus()
+                if notificationStatus == .denied {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                } else {
+                    Task {
+                        let center = UNUserNotificationCenter.current()
+                        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+                        await refreshNotificationStatus()
+                    }
                 }
             },
             recheck: { await refreshNotificationStatus() }
@@ -99,46 +107,23 @@ struct OnboardingView: View {
     }
 
     private var providerPage: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
                 Image(systemName: "brain")
-                    .font(.system(size: 36))
+                    .font(.system(size: 28))
                     .foregroundStyle(.purple)
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("配置 AI Provider")
-                        .font(.title2.weight(.semibold))
-                    Text("默认接入本地 LM Studio（http://192.168.1.23:1234/v1）。\n稍后在 Settings → AI 中可改 Base URL / Model / Key。")
-                        .font(.callout)
+                        .font(.headline)
+                    Text("可在这里直接增 / 删 / 改 / 测试。视觉模型才能分析截图。")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.bottom, 8)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("当前默认配置")
-                    .font(.caption.smallCaps())
-                    .foregroundStyle(.secondary)
-                ForEach(ProviderStore.shared.providers) { p in
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.blue)
-                        VStack(alignment: .leading) {
-                            Text(p.nickname).font(.callout)
-                            Text("\(p.baseURL) · \(p.model)")
-                                .font(.caption2.monospaced())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .padding(12)
-            .background(Color.gray.opacity(0.06), in: .rect(cornerRadius: 6))
-
-            Text("⚠️ 必须是视觉模型（VL 后缀）才能正确分析截图；纯文本模型会忽略图片。")
-                .font(.caption2)
-                .foregroundStyle(.orange)
+            ProvidersTab(store: ProviderStore.shared)
+                .frame(maxHeight: .infinity)
         }
-        .padding(.horizontal, 30).padding(.vertical, 24)
+        .padding(.horizontal, 20).padding(.vertical, 16)
     }
 
     private var donePage: some View {
@@ -229,6 +214,7 @@ struct OnboardingView: View {
     private func refreshNotificationStatus() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         await MainActor.run {
+            notificationStatus = settings.authorizationStatus
             notificationGranted = (settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional)
         }
     }

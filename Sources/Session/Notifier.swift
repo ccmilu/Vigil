@@ -10,15 +10,18 @@ enum Notifier {
     private static let logger = Logger(subsystem: "com.jason12138.focus", category: "Notifier")
     nonisolated(unsafe) private static let delegate = ForegroundNotificationDelegate()
 
-    /// App 启动时调一次
-    static func setUp() async {
+    /// App 启动时调一次：仅装上 delegate；授权请求让 Onboarding 控制以免首启时静默授权
+    static func setUp() {
+        UNUserNotificationCenter.current().delegate = delegate
+    }
+
+    /// Onboarding / 首次手动触发授权
+    @discardableResult
+    static func requestAuthorization() async -> UNAuthorizationStatus {
         let center = UNUserNotificationCenter.current()
-        center.delegate = delegate
-        do {
-            _ = try await center.requestAuthorization(options: [.alert, .sound, .badge])
-        } catch {
-            logger.warning("通知授权失败：\(error.localizedDescription)")
-        }
+        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        let settings = await center.notificationSettings()
+        return settings.authorizationStatus
     }
 
     static func notifyBreakEnd() async {

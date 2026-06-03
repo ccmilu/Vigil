@@ -27,27 +27,33 @@ final class DistractOverlay {
         dismiss()
         guard let screen = NSScreen.main else { return }
 
-        let w = NSWindow(
+        // 用 NSPanel + 全屏覆盖；NSScreen.frame 已含菜单栏，但 setFrame 后内容会自动撑满
+        let w = NSPanel(
             contentRect: screen.frame,
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: false
         )
         w.isOpaque = false
         w.backgroundColor = .clear
         w.hasShadow = false
-        w.level = .modalPanel
-        w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        w.level = NSWindow.Level(Int(CGShieldingWindowLevel()))  // 高于一切 App
+        w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         w.ignoresMouseEvents = false
         w.isMovable = false
+        w.setFrame(screen.frame, display: false)
 
-        w.contentViewController = NSHostingController(
+        let host = NSHostingController(
             rootView: DistractOverlayView(
                 reminder: reminder,
                 promise: promise,
                 onDismiss: { [weak self] in self?.dismiss() }
             )
         )
-        w.makeKeyAndOrderFront(nil)
+        host.view.frame = NSRect(origin: .zero, size: screen.frame.size)
+        host.view.autoresizingMask = [.width, .height]
+        w.contentViewController = host
+        w.setFrame(screen.frame, display: true)
+        w.orderFrontRegardless()
         window = w
 
         autoCloseTask?.cancel()
@@ -78,7 +84,6 @@ private struct DistractOverlayView: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.65)
-                .ignoresSafeArea()
                 .onTapGesture { onDismiss() }
 
             VStack(spacing: 20) {
@@ -125,6 +130,7 @@ private struct DistractOverlayView: View {
             .opacity(appeared ? 1 : 0)
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { appeared = true }
         .background(EscKeyHandler { onDismiss() })
     }

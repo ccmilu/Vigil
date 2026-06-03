@@ -7,16 +7,22 @@ struct ContentView: View {
     @Environment(\.modelContext) private var ctx
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            header
-            phaseSection
-            Spacer(minLength: 0)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+                    phaseSection
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            Divider()
             footer
+                .padding(.horizontal, 24)
+                .padding(.vertical, 10)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            // 休息结束时自动召唤 Promise 面板，让"倒计时结束"有明确的下一步
             sessionMgr.onBreakFinished = {
                 PromisePanel.show(sessionMgr: sessionMgr)
             }

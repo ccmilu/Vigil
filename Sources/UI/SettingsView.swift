@@ -114,42 +114,97 @@ private struct SoundTab: View {
     @State private var completeName = SoundPlayer.shared.currentName(for: .complete)
 
     var body: some View {
-        Form {
-            Section {
-                Toggle("启用提示音", isOn: $enabled)
-                    .onChange(of: enabled) { _, v in SoundPlayer.shared.isEnabled = v }
-                HStack {
-                    Text("音量")
-                    Slider(value: $volume, in: 0...1)
-                        .onChange(of: volume) { _, v in SoundPlayer.shared.volume = v }
-                    Text("\(Int(volume * 100))%")
-                        .frame(width: 40, alignment: .trailing)
-                        .font(.system(.body, design: .monospaced))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Section {
+                    Toggle("启用提示音", isOn: $enabled)
+                        .onChange(of: enabled) { _, v in SoundPlayer.shared.isEnabled = v }
+                    HStack {
+                        Text("音量").frame(width: 60, alignment: .leading)
+                        Slider(value: $volume, in: 0...1)
+                            .onChange(of: volume) { _, v in SoundPlayer.shared.volume = v }
+                        Text("\(Int(volume * 100))%")
+                            .frame(width: 44, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
                 }
+                .padding(12)
+                .background(Color.gray.opacity(0.05), in: .rect(cornerRadius: 6))
+
+                Text("鼠标悬停某个音名即可试听，点击选中")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                soundPickerRow(label: "开始 session", cue: .start, selected: $startName)
+                soundPickerRow(label: "检测到分心", cue: .distract, selected: $distractName)
+                soundPickerRow(label: "session 完成", cue: .complete, selected: $completeName)
             }
-            soundRow(label: "开始 session", cue: .start, name: $startName)
-            soundRow(label: "检测到分心", cue: .distract, name: $distractName)
-            soundRow(label: "session 完成", cue: .complete, name: $completeName)
+            .padding(20)
         }
-        .formStyle(.grouped)
     }
 
-    private func soundRow(label: String, cue: SoundPlayer.Cue, name: Binding<String>) -> some View {
-        HStack {
-            Text(label)
-                .frame(width: 110, alignment: .leading)
-            Picker("", selection: name) {
-                ForEach(SoundPlayer.availableSystemSounds, id: \.self) {
-                    Text($0).tag($0)
+    private func soundPickerRow(label: String, cue: SoundPlayer.Cue, selected: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(label).font(.callout.weight(.medium))
+                Spacer()
+                Text("当前：\(selected.wrappedValue)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(SoundPlayer.availableSystemSounds, id: \.self) { name in
+                        SoundChip(
+                            name: name,
+                            isSelected: selected.wrappedValue == name,
+                            onSelect: {
+                                selected.wrappedValue = name
+                                SoundPlayer.shared.setSound(cue, name: name)
+                            }
+                        )
+                    }
                 }
+                .padding(.vertical, 2)
             }
-            .labelsHidden()
-            .onChange(of: name.wrappedValue) { _, v in
-                SoundPlayer.shared.setSound(cue, name: v)
-            }
-            Button("试听") { SoundPlayer.shared.play(cue) }
-                .buttonStyle(.bordered)
         }
+        .padding(12)
+        .background(Color.gray.opacity(0.05), in: .rect(cornerRadius: 6))
+    }
+}
+
+private struct SoundChip: View {
+    let name: String
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: onSelect) {
+            Text(name)
+                .font(.caption)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(background)
+                .clipShape(.capsule)
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovering = hovering
+            if hovering {
+                NSSound(named: name)?.play()
+            }
+        }
+    }
+
+    private var background: Color {
+        if isSelected { return Color.accentColor.opacity(0.2) }
+        if isHovering { return Color.gray.opacity(0.15) }
+        return Color.gray.opacity(0.06)
     }
 }
 
@@ -289,7 +344,7 @@ private struct ShortcutsTab: View {
     }
 }
 
-private struct ProvidersTab: View {
+struct ProvidersTab: View {
     @ObservedObject var store: ProviderStore
     @State private var editing: AIProvider?
     @State private var testResult: String?
@@ -324,9 +379,14 @@ private struct ProvidersTab: View {
                         store.update(updated)
                         self.editing = updated
                     },
+                    onDone: {
+                        self.editing = nil
+                        self.testResult = nil
+                    },
                     onDelete: {
                         store.remove(editing)
                         self.editing = nil
+                        self.testResult = nil
                     },
                     onTest: { p in
                         testResult = "连通测试中…"
@@ -337,6 +397,8 @@ private struct ProvidersTab: View {
                         Task { testResult = await testVision(p) }
                     }
                 )
+                // 关键：editing 变化时强制重建 ProviderEditor 内部 @State
+                .id(editing.id)
                 if let result = testResult {
                     ScrollView {
                         Text(result)
@@ -432,29 +494,40 @@ private struct ProvidersTab: View {
 private struct ProviderEditor: View {
     @State var provider: AIProvider
     let onSave: (AIProvider) -> Void
+    let onDone: () -> Void
     let onDelete: () -> Void
     let onTest: (AIProvider) -> Void
     let onTestVision: (AIProvider) -> Void
 
     var body: some View {
-        Form {
-            TextField("昵称", text: $provider.nickname)
-            TextField("Base URL", text: $provider.baseURL)
-                .textContentType(.URL)
-                .autocorrectionDisabled()
-            TextField("Model", text: $provider.model)
-                .autocorrectionDisabled()
-            SecureField("API Key", text: $provider.apiKey)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("编辑 Provider")
+                    .font(.headline)
+                Spacer()
+                Button("完成") { onDone() }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+            }
+            Form {
+                TextField("昵称", text: $provider.nickname)
+                TextField("Base URL", text: $provider.baseURL)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                TextField("Model", text: $provider.model)
+                    .autocorrectionDisabled()
+                SecureField("API Key", text: $provider.apiKey)
+            }
+            .onChange(of: provider) { _, new in onSave(new) }
+
+            HStack(spacing: 8) {
+                Button("测试连通性") { onTest(provider) }
+                Button("测试视觉") { onTestVision(provider) }
+                    .help("截当前屏 + 让模型描述，验证模型是否真有视觉能力")
+                Spacer()
+                Button("删除", role: .destructive) { onDelete() }
+            }
         }
         .padding(.top, 4)
-        .onChange(of: provider) { _, new in onSave(new) }
-
-        HStack(spacing: 8) {
-            Button("测试连通性") { onTest(provider) }
-            Button("测试视觉") { onTestVision(provider) }
-                .help("截当前屏 + 让模型描述，验证模型是否真有视觉能力")
-            Spacer()
-            Button("删除", role: .destructive) { onDelete() }
-        }
     }
 }

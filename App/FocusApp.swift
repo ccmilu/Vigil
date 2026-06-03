@@ -47,7 +47,7 @@ struct FocusApp: App {
                     .environmentObject(appSettings)
                     .frame(minWidth: 560, minHeight: 420)
                     .task {
-                        await Notifier.setUp()
+                        Notifier.setUp()
                         KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
                             Task { @MainActor in
                                 PromisePanel.show(sessionMgr: sessionMgr)
