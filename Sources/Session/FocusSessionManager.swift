@@ -412,6 +412,11 @@ final class FocusSessionManager: ObservableObject {
                 createdAt: result.at,
                 analysisLatencyMs: result.latencyMs
             )
+            // 每帧 AI 返回都更新刘海岛展示的活动描述
+            if fromAI, let ai = result.ai {
+                NotchTimer.shared.updateAIFeedback(reasoning: ai.reasoning)
+            }
+
             // 状态变化打通知 + 提示音 + 全屏遮罩 + 刘海 pulse
             if result.hasChanged, level == .distracted {
                 let reminder = result.ai?.reminder ?? ""

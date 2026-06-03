@@ -67,7 +67,8 @@ final class NotchTimer: ObservableObject {
     @Published var remaining: TimeInterval = 0
     @Published var level: FocusLevel? = nil
     @Published var promise: String = ""
-    @Published var reminder: String = ""
+    @Published var reasoning: String = ""     // AI 每帧的活动描述
+    @Published var reminder: String = ""      // 仅 distracted 时的拉回提醒
     @Published var forceExpandUntil: Date? = nil
 
     private var window: NSPanel?
@@ -89,6 +90,11 @@ final class NotchTimer: ObservableObject {
     func update(remaining: TimeInterval, level: FocusLevel?) {
         self.remaining = remaining
         self.level = level
+    }
+
+    /// 每次 AI 返回更新一下，让展开态能看到当前 AI 怎么描述屏幕活动
+    func updateAIFeedback(reasoning: String) {
+        self.reasoning = reasoning
     }
 
     func flashDistracted(reminder: String) {
@@ -304,17 +310,45 @@ struct NotchView: View {
                     .background(levelColor.opacity(0.18), in: .capsule)
             }
             if !state.promise.isEmpty {
-                Text(state.promise)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.6))
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Image(systemName: "target")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.4))
+                    Text(state.promise)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
             }
+
+            // AI 每帧的活动描述（fully/wandering/distracted 都显示）
+            if !state.reasoning.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "eye")
+                        .font(.caption2)
+                        .foregroundStyle(levelColor)
+                        .padding(.top, 2)
+                    Text(state.reasoning)
+                        .font(.callout)
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(2)
+                }
+                .padding(.top, 2)
+            }
+
+            // distracted 时叠加 AI 写的 reminder（拉回文案）
             if isDistracted, !state.reminder.isEmpty {
-                Text(state.reminder)
-                    .font(.callout)
-                    .foregroundStyle(.white.opacity(0.95))
-                    .lineLimit(2)
-                    .padding(.top, 2)
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.bubble.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                        .padding(.top, 2)
+                    Text(state.reminder)
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                }
+                .padding(.top, 2)
             }
         }
         .padding(.horizontal, 24)
