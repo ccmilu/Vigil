@@ -236,12 +236,19 @@ struct ContentView: View {
 
     // MARK: - Footer
 
+    @EnvironmentObject private var providerStore: ProviderStore
+
     private var footer: some View {
         HStack {
-            Text("Provider: \(DemoConfig.baseURL.absoluteString) · \(DemoConfig.model)")
+            if let p = providerStore.selected {
+                Text("Provider: \(p.nickname) · \(p.model)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+            Text("⌘, 打开设置")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
-            Spacer()
         }
     }
 

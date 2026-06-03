@@ -14,10 +14,19 @@ extension KeyboardShortcuts.Name {
 struct FocusApp: App {
     private let modelContainer = AppContainer.shared
 
+    @StateObject private var providerStore = ProviderStore()
     @StateObject private var sessionMgr: FocusSessionManager
 
     init() {
-        let mgr = FocusSessionManager(modelContainer: AppContainer.shared)
+        // 临时引用，避免 @StateObject 闭包捕获错乱
+        let providers = ProviderStore()
+        let mgr = FocusSessionManager(
+            modelContainer: AppContainer.shared,
+            serviceFactory: { @MainActor in
+                providers.selected?.makeService() ?? OpenAICompatibleService()
+            }
+        )
+        _providerStore = StateObject(wrappedValue: providers)
         _sessionMgr = StateObject(wrappedValue: mgr)
     }
 
@@ -25,6 +34,7 @@ struct FocusApp: App {
         WindowGroup("Focus") {
             ContentView()
                 .environmentObject(sessionMgr)
+                .environmentObject(providerStore)
                 .frame(minWidth: 560, minHeight: 420)
                 .task {
                     await Notifier.requestAuthorization()

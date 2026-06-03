@@ -28,7 +28,8 @@ final class FocusSessionManager: ObservableObject {
     @Published private(set) var lastAnalysis: AnalysisRecord?
 
     private let modelContainer: ModelContainer
-    private let service: AIService
+    private let serviceFactory: @MainActor () -> AIService
+    private var service: AIService
     private var analyzer: FrameAnalyzer?
     private var session: FocusSession?
 
@@ -41,12 +42,26 @@ final class FocusSessionManager: ObservableObject {
 
     init(
         modelContainer: ModelContainer,
-        service: AIService = OpenAICompatibleService(),
+        serviceFactory: @escaping @MainActor () -> AIService = { OpenAICompatibleService() },
         captureConfig: CaptureConfig = .default
     ) {
         self.modelContainer = modelContainer
-        self.service = service
+        self.serviceFactory = serviceFactory
+        self.service = serviceFactory()
         self.captureConfig = captureConfig
+    }
+
+    /// 测试便捷构造器：直接注入固定 service。
+    convenience init(
+        modelContainer: ModelContainer,
+        service: AIService,
+        captureConfig: CaptureConfig = .default
+    ) {
+        self.init(
+            modelContainer: modelContainer,
+            serviceFactory: { service },
+            captureConfig: captureConfig
+        )
     }
 
     // MARK: - 起 session
@@ -55,6 +70,9 @@ final class FocusSessionManager: ObservableObject {
     @discardableResult
     func start(promise: String, durationSeconds: Int) async -> Result<UUID, Error> {
         phase = .preparing(promise: promise)
+
+        // 每次起 session 都重新拿 service（用户可能在 Settings 换了 provider）
+        self.service = serviceFactory()
 
         // 阶段 1：任务理解（失败也不阻塞，只记 warning）
         do {
