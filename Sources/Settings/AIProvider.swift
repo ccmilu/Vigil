@@ -1,11 +1,12 @@
 import Foundation
 
 /// 一个 AI Provider 配置。MVP 只支持 OpenAI 兼容协议族；Anthropic / Gemini 留接口。
+/// Provider 元数据。apiKey 不再持久化在此结构里——存到 Keychain，
+/// 通过 id 关联。Codable 时 apiKey 始终写空字符串以保持兼容。
 struct AIProvider: Codable, Identifiable, Equatable, Hashable {
     enum Family: String, Codable, CaseIterable, Identifiable {
         case openaiCompatible
-        // case anthropic
-        // case gemini
+        // case anthropic / gemini  // v0.2
         var id: String { rawValue }
         var displayName: String {
             switch self {
@@ -19,6 +20,8 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
     var family: Family
     var baseURL: String
     var model: String
+    /// 内存中的临时 Key（用于编辑器读写）。持久化时不写到 UserDefaults，
+    /// 实际通过 Keychain 存取，由 ProviderStore.commitKey 同步。
     var apiKey: String
     var enabled: Bool
 
@@ -28,7 +31,7 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
         family: Family = .openaiCompatible,
         baseURL: String,
         model: String,
-        apiKey: String,
+        apiKey: String = "",
         enabled: Bool = true
     ) {
         self.id = id
@@ -40,23 +43,54 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
         self.enabled = enabled
     }
 
+    // 序列化时不带 apiKey，避免落到 UserDefaults
+    enum CodingKeys: String, CodingKey {
+        case id, nickname, family, baseURL, model, enabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(UUID.self, forKey: .id)
+        self.nickname = try c.decode(String.self, forKey: .nickname)
+        self.family = (try? c.decode(Family.self, forKey: .family)) ?? .openaiCompatible
+        self.baseURL = try c.decode(String.self, forKey: .baseURL)
+        self.model = try c.decode(String.self, forKey: .model)
+        self.enabled = (try? c.decode(Bool.self, forKey: .enabled)) ?? true
+        self.apiKey = ""  // 解码时不取 key，使用方应从 Keychain 加载
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(nickname, forKey: .nickname)
+        try c.encode(family, forKey: .family)
+        try c.encode(baseURL, forKey: .baseURL)
+        try c.encode(model, forKey: .model)
+        try c.encode(enabled, forKey: .enabled)
+    }
+
     /// 构造对应的 AIService。debugSink 非 nil 时启用 prompts.jsonl 记录。
+    /// 优先用内存中的 apiKey；若为空再从 Keychain 取。
     func makeService(debugSink: AIDebugSink? = nil) -> AIService {
         let url = URL(string: baseURL) ?? DemoConfig.baseURL
+        let key = apiKey.isEmpty
+            ? (KeychainStore.get(for: id.uuidString) ?? "")
+            : apiKey
         return OpenAICompatibleService(
             baseURL: url,
             model: model,
-            apiKey: apiKey,
+            apiKey: key,
             debugSink: debugSink
         )
     }
 }
 
 extension AIProvider {
+    /// 首次启动用的默认 provider。Key 在 ProviderStore 初始化时写 Keychain。
     static let demoFallback = AIProvider(
         nickname: "本地 LM Studio",
         baseURL: DemoConfig.baseURL.absoluteString,
         model: DemoConfig.model,
-        apiKey: DemoConfig.apiKey
+        apiKey: ""  // Key 走 Keychain
     )
 }

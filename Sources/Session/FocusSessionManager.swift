@@ -248,6 +248,13 @@ final class FocusSessionManager: ObservableObject {
             s.summary = "(AI 复盘失败：\(error.localizedDescription))"
         }
         try? ctx.save()
+
+        // 更新 Streak（实际时长 ≥ 5min 才计入）
+        StreakUpdater.recordCompletion(
+            sessionSeconds: actual,
+            in: modelContainer
+        )
+
         phase = .completed(sessionID: s.id)
         self.session = nil
         self.analyzer = nil

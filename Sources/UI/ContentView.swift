@@ -41,6 +41,7 @@ struct ContentView: View {
     private var phaseSection: some View {
         switch sessionMgr.phase {
         case .idle:
+            StreakCard()
             startButton
             Divider()
             historyList

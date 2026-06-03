@@ -21,7 +21,12 @@ final class ProviderStore: ObservableObject {
            !list.isEmpty {
             self.providers = list
         } else {
-            self.providers = [.demoFallback]
+            // 首次启动：种子默认 provider + 把 DemoConfig.apiKey 写进 Keychain
+            let demo = AIProvider.demoFallback
+            self.providers = [demo]
+            if KeychainStore.get(for: demo.id.uuidString) == nil {
+                KeychainStore.set(DemoConfig.apiKey, for: demo.id.uuidString)
+            }
         }
         if let idStr = defaults.string(forKey: Self.selectedKey),
            let id = UUID(uuidString: idStr),
@@ -29,6 +34,10 @@ final class ProviderStore: ObservableObject {
             self.selectedID = id
         } else {
             self.selectedID = providers.first?.id
+        }
+        // 把每个 provider 的 Keychain Key 加载到内存里给编辑器用
+        for i in providers.indices {
+            providers[i].apiKey = KeychainStore.get(for: providers[i].id.uuidString) ?? ""
         }
     }
 
@@ -38,6 +47,7 @@ final class ProviderStore: ObservableObject {
 
     func add(_ p: AIProvider) {
         providers.append(p)
+        KeychainStore.set(p.apiKey, for: p.id.uuidString)
         if selectedID == nil { selectedID = p.id }
         persist()
     }
@@ -45,12 +55,14 @@ final class ProviderStore: ObservableObject {
     func update(_ p: AIProvider) {
         if let idx = providers.firstIndex(where: { $0.id == p.id }) {
             providers[idx] = p
+            KeychainStore.set(p.apiKey, for: p.id.uuidString)
             persist()
         }
     }
 
     func remove(_ p: AIProvider) {
         providers.removeAll(where: { $0.id == p.id })
+        KeychainStore.delete(for: p.id.uuidString)
         if selectedID == p.id { selectedID = providers.first?.id }
         persist()
     }
