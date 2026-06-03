@@ -7,13 +7,15 @@ enum PromisePanel {
 
     @MainActor
     static func show(sessionVM: SessionViewModel) {
+        // 先把 App 拉到前台，否则 makeKey 可能没生效
+        NSApp.activate(ignoringOtherApps: true)
+
         if let existing = PromisePanelWindow.shared {
             existing.makeKeyAndOrderFront(nil)
             return
         }
         let win = PromisePanelWindow(sessionVM: sessionVM)
         PromisePanelWindow.shared = win
-        NSApp.activate(ignoringOtherApps: true)
         win.center()
         win.makeKeyAndOrderFront(nil)
     }
@@ -25,13 +27,12 @@ final class PromisePanelWindow: NSPanel {
     init(sessionVM: SessionViewModel) {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 200),
-            styleMask: [.titled, .closable, .fullSizeContentView, .nonactivatingPanel],
+            styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         title = "What's the promise?"
         isFloatingPanel = true
-        becomesKeyOnlyIfNeeded = false
         level = .floating
         titlebarAppearsTransparent = true
         isReleasedWhenClosed = false
@@ -51,6 +52,7 @@ final class PromisePanelWindow: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }
 
 private struct PromisePanelContent: View {

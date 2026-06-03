@@ -8,6 +8,8 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 24) {
             header
 
+            startButton
+
             Divider()
 
             stateView
@@ -23,10 +25,27 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Focus")
                 .font(.system(size: 28, weight: .bold))
-            Text("按 ⌘⌥Space 弹出 Promise 输入框，写一句你打算做的事")
+            Text("点下方按钮或按 ⇧⌘⌥Space 弹出 Promise 输入框")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var startButton: some View {
+        Button {
+            PromisePanel.show(sessionVM: sessionVM)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "target")
+                Text("Start Promise")
+                    .fontWeight(.medium)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .keyboardShortcut("n", modifiers: [.command])
     }
 
     @ViewBuilder

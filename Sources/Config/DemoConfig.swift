@@ -10,8 +10,9 @@ enum DemoConfig {
     /// 如果你装的不是这个模型，改成实际的 ID
     static let model = "qwen2.5-vl-7b-instruct"
 
-    /// LM Studio 默认不校验 Key，但 OpenAI 协议要求字段存在
-    static let apiKey = "lm-studio"
+    /// API Key 从 LocalConfig 读取（被 .gitignore 屏蔽，不进版本库）。
+    /// 若 LocalConfig.swift 不存在，构建会报错，提示你照着模板新建一个。
+    static let apiKey = LocalConfig.apiKey
 
     /// 单次请求超时（秒）
     static let requestTimeout: TimeInterval = 30

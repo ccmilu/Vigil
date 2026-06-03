@@ -3,7 +3,12 @@ import KeyboardShortcuts
 
 // 注册全局快捷键名（其它地方通过 .startPromise 引用即可）
 extension KeyboardShortcuts.Name {
-    static let startPromise = Self("startPromise", default: .init(.space, modifiers: [.command, .option]))
+    // ⌘⌥Space 默认被 Spotlight 占用，这里改成 ⇧⌘⌥Space。
+    // 用户可在 Settings → Shortcuts 中重绑。
+    static let startPromise = Self(
+        "startPromise",
+        default: .init(.space, modifiers: [.command, .option, .shift])
+    )
 }
 
 @main
