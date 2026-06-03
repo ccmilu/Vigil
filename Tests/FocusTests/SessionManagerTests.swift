@@ -44,16 +44,4 @@ final class SessionManagerTests: XCTestCase {
     }
 }
 
-extension FocusSessionManager.Phase: @retroactive Equatable {
-    public static func == (lhs: FocusSessionManager.Phase, rhs: FocusSessionManager.Phase) -> Bool {
-        switch (lhs, rhs) {
-        case (.idle, .idle): return true
-        case (.preparing(let a), .preparing(let b)): return a == b
-        case (.running(let pa, _), .running(let pb, _)): return pa == pb
-        case (.analyzing, .analyzing): return true
-        case (.completed, .completed): return true
-        case (.failed(let a), .failed(let b)): return a == b
-        default: return false
-        }
-    }
-}
+// FocusSessionManager.Phase 已经在主 target 标 Equatable，这里不需要再实现

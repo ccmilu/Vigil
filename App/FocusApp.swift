@@ -15,18 +15,22 @@ struct FocusApp: App {
     private let modelContainer = AppContainer.shared
 
     @StateObject private var providerStore = ProviderStore()
+    @StateObject private var appSettings = AppSettings()
     @StateObject private var sessionMgr: FocusSessionManager
 
     init() {
-        // 临时引用，避免 @StateObject 闭包捕获错乱
         let providers = ProviderStore()
+        let settings = AppSettings()
         let mgr = FocusSessionManager(
             modelContainer: AppContainer.shared,
-            serviceFactory: { @MainActor in
-                providers.selected?.makeService() ?? OpenAICompatibleService()
+            settings: settings,
+            serviceFactory: { @MainActor sink in
+                providers.selected?.makeService(debugSink: sink)
+                    ?? OpenAICompatibleService(debugSink: sink)
             }
         )
         _providerStore = StateObject(wrappedValue: providers)
+        _appSettings = StateObject(wrappedValue: settings)
         _sessionMgr = StateObject(wrappedValue: mgr)
     }
 
@@ -35,6 +39,7 @@ struct FocusApp: App {
             ContentView()
                 .environmentObject(sessionMgr)
                 .environmentObject(providerStore)
+                .environmentObject(appSettings)
                 .frame(minWidth: 560, minHeight: 420)
                 .task {
                     await Notifier.setUp()
@@ -50,6 +55,8 @@ struct FocusApp: App {
 
         Settings {
             SettingsView()
+                .environmentObject(appSettings)
+                .environmentObject(providerStore)
         }
     }
 }

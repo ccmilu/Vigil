@@ -42,6 +42,8 @@ struct ContentView: View {
             preparingView(promise: promise)
         case .running(let promise, let remaining):
             runningView(promise: promise, remaining: remaining)
+        case .resting(let remaining):
+            restingView(remaining: remaining)
         case .analyzing:
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
@@ -156,24 +158,76 @@ struct ContentView: View {
         let s = try? ctx.fetch(
             FetchDescriptor<FocusSession>(predicate: #Predicate { $0.id == sessionID })
         ).first
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 14) {
             Label("Session 完成", systemImage: "checkmark.seal.fill")
                 .foregroundStyle(.green)
                 .font(.headline)
             if let s {
                 ratiosBar(s)
                 if let summary = s.summary {
-                    Text(summary)
-                        .textSelection(.enabled)
-                        .padding(12)
-                        .background(Color.gray.opacity(0.06), in: .rect(cornerRadius: 6))
+                    ScrollView {
+                        Text(summary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color.gray.opacity(0.06), in: .rect(cornerRadius: 6))
+                    }
+                    .frame(maxHeight: 140)
                 }
             }
-            Button("再来一轮") {
-                PromisePanel.show(sessionMgr: sessionMgr)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("接下来")
+                    .font(.caption.smallCaps())
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Button {
+                        PromisePanel.show(sessionMgr: sessionMgr)
+                    } label: {
+                        Label("再来一轮", systemImage: "play.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+
+                    Menu {
+                        Button("5 分钟") { sessionMgr.startBreak(durationSeconds: 5 * 60) }
+                        Button("10 分钟") { sessionMgr.startBreak(durationSeconds: 10 * 60) }
+                        Button("15 分钟") { sessionMgr.startBreak(durationSeconds: 15 * 60) }
+                    } label: {
+                        Label("休息一下", systemImage: "cup.and.saucer")
+                    }
+                    .menuStyle(.borderedButton)
+                    .controlSize(.large)
+
+                    Button {
+                        sessionMgr.reset()
+                    } label: {
+                        Label("返回首页", systemImage: "house")
+                    }
+                    .controlSize(.large)
+                }
             }
-            .controlSize(.large)
-            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func restingView(remaining: TimeInterval) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("Resting", systemImage: "cup.and.saucer.fill")
+                    .foregroundStyle(.orange)
+                    .font(.headline)
+                Spacer()
+                Text(formatTime(remaining))
+                    .font(.system(size: 32, weight: .semibold, design: .monospaced))
+            }
+            Text("正在休息，期间不会监督屏幕。到时会通知你。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("结束休息") { sessionMgr.reset() }
+                    .controlSize(.large)
+            }
         }
     }
 

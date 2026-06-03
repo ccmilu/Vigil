@@ -21,6 +21,20 @@ enum Notifier {
         }
     }
 
+    static func notifyBreakEnd() async {
+        let content = UNMutableNotificationContent()
+        content.title = "休息结束"
+        content.body = "可以回到工作了"
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
+        let req = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        try? await UNUserNotificationCenter.current().add(req)
+    }
+
     static func notifyDistraction(reminder: String) async {
         let content = UNMutableNotificationContent()
         content.title = "Focus · 拉你回来一下"

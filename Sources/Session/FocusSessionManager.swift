@@ -19,6 +19,7 @@ final class FocusSessionManager: ObservableObject {
         case idle
         case preparing(promise: String)
         case running(promise: String, remaining: TimeInterval)
+        case resting(remaining: TimeInterval)
         case analyzing
         case completed(sessionID: UUID)
         case failed(String)
@@ -28,7 +29,8 @@ final class FocusSessionManager: ObservableObject {
     @Published private(set) var lastAnalysis: AnalysisRecord?
 
     private let modelContainer: ModelContainer
-    private let serviceFactory: @MainActor () -> AIService
+    private let serviceFactory: @MainActor (AIDebugSink?) -> AIService
+    private let settings: AppSettings
     private var service: AIService
     private var analyzer: FrameAnalyzer?
     private var session: FocusSession?
@@ -36,32 +38,64 @@ final class FocusSessionManager: ObservableObject {
     private var timer: Timer?
     private var tickTimer: Timer?
     private var startedAt: Date?
+    /// 当前活跃 session 的 capture 配置（在 start 时根据 settings 计算）
+    private var activeCaptureConfig: CaptureConfig = .default
 
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
-    private let captureConfig: CaptureConfig
 
     init(
         modelContainer: ModelContainer,
-        serviceFactory: @escaping @MainActor () -> AIService = { OpenAICompatibleService() },
-        captureConfig: CaptureConfig = .default
+        settings: AppSettings = AppSettings(),
+        serviceFactory: @escaping @MainActor (AIDebugSink?) -> AIService = { sink in
+            OpenAICompatibleService(debugSink: sink)
+        }
     ) {
         self.modelContainer = modelContainer
+        self.settings = settings
         self.serviceFactory = serviceFactory
-        self.service = serviceFactory()
-        self.captureConfig = captureConfig
+        self.service = serviceFactory(nil)
     }
 
     /// 测试便捷构造器：直接注入固定 service。
     convenience init(
         modelContainer: ModelContainer,
-        service: AIService,
-        captureConfig: CaptureConfig = .default
+        service: AIService
     ) {
         self.init(
             modelContainer: modelContainer,
-            serviceFactory: { service },
-            captureConfig: captureConfig
+            settings: AppSettings(),
+            serviceFactory: { _ in service }
         )
+    }
+
+    func reset() {
+        phase = .idle
+    }
+
+    /// 开始一段休息（不截屏、不调 AI），到时通知。
+    func startBreak(durationSeconds: Int) {
+        stopCountdown()
+        stopTicking()
+        phase = .resting(remaining: TimeInterval(durationSeconds))
+        DockBadge.setRemaining(seconds: durationSeconds)
+        let end = Date().addingTimeInterval(TimeInterval(durationSeconds))
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                guard case .resting = self.phase else { return }
+                let remaining = end.timeIntervalSinceNow
+                if remaining <= 0 {
+                    self.stopCountdown()
+                    DockBadge.setRemaining(seconds: nil)
+                    await Notifier.notifyBreakEnd()
+                    self.phase = .idle
+                } else {
+                    self.phase = .resting(remaining: remaining)
+                    DockBadge.setRemaining(seconds: Int(remaining))
+                }
+            }
+        }
     }
 
     // MARK: - 起 session
@@ -70,7 +104,7 @@ final class FocusSessionManager: ObservableObject {
     /// 先校验 promise 是否足够具体。返回 suggestion 非空时调用方应让用户改 promise 再起跑。
     /// 网络错误返回 nil（不阻塞起跑）。
     func validatePromise(_ promise: String) async -> String? {
-        self.service = serviceFactory()
+        self.service = serviceFactory(nil)
         do {
             let result = try await service.analyzeTask(promise)
             return result.suggestion
@@ -83,9 +117,6 @@ final class FocusSessionManager: ObservableObject {
     @discardableResult
     func start(promise: String, durationSeconds: Int) async -> Result<UUID, Error> {
         phase = .preparing(promise: promise)
-
-        // 每次起 session 都重新拿 service（用户可能在 Settings 换了 provider）
-        self.service = serviceFactory()
 
         // 建 SwiftData session
         let ctx = modelContainer.mainContext
@@ -101,12 +132,21 @@ final class FocusSessionManager: ObservableObject {
         self.startedAt = .now
         phase = .running(promise: promise, remaining: TimeInterval(durationSeconds))
 
+        // 准备 debug sink（若开启），路径写在该 session 目录
+        let sessionDir = ScreenshotStore.rootDirectory.appendingPathComponent(s.id.uuidString)
+        try? FileManager.default.createDirectory(at: sessionDir, withIntermediateDirectories: true)
+        let debugSink: AIDebugSink? = settings.debugEnabled
+            ? AIDebugSink(url: sessionDir.appendingPathComponent("prompts.jsonl"))
+            : nil
+        // 每次起 session 都重新拿 service（用户可能在 Settings 换了 provider）
+        self.service = serviceFactory(debugSink)
+
         // 起 FrameAnalyzer
-        let logURL = ScreenshotStore.rootDirectory
-            .appendingPathComponent("\(s.id.uuidString)/diagnostic.jsonl")
+        self.activeCaptureConfig = settings.makeCaptureConfig()
+        let logURL = sessionDir.appendingPathComponent("diagnostic.jsonl")
         self.analyzer = FrameAnalyzer(
             service: service,
-            config: captureConfig,
+            config: activeCaptureConfig,
             sessionID: s.id,
             promise: promise,
             diagnosticLogURL: logURL
@@ -149,7 +189,7 @@ final class FocusSessionManager: ObservableObject {
             predicate: #Predicate { $0.session?.id == sid }
         )
         let records = (try? ctx.fetch(descriptor)) ?? []
-        let perRecord = captureConfig.tickInterval
+        let perRecord = activeCaptureConfig.tickInterval
         var fully = 0.0, wandering = 0.0, distracted = 0.0, idle = 0.0
         for r in records {
             switch r.level {
@@ -221,7 +261,7 @@ final class FocusSessionManager: ObservableObject {
     private func startTicking() {
         tickTimer?.invalidate()
         tickTimer = Timer.scheduledTimer(
-            withTimeInterval: captureConfig.tickInterval, repeats: true
+            withTimeInterval: activeCaptureConfig.tickInterval, repeats: true
         ) { [weak self] _ in
             Task { @MainActor in
                 await self?.runOneTick()
@@ -270,13 +310,14 @@ final class FocusSessionManager: ObservableObject {
         case .skippedNoWindows, .skippedAIBusy:
             return  // 这两种情况不入库，避免噪声
         case .skippedDhashStable(let dist):
-            // 复用上次 level，不调 AI，但记一条 fromAI=false 的复用记录
+            // 复用上次 AI 判定的真实 level（之前硬编码 .wandering 是 bug）
+            let reusedLevel = result.lastKnownLevel ?? .wandering
             record = AnalysisRecord(
                 session: session,
                 screenshotLocalPath: screenshotPath,
                 frontAppName: result.front?.appName ?? "",
                 frontWindowTitles: result.front?.windowTitles ?? "",
-                level: .wandering,  // 这里没有 lastLevel；后续可让 analyzer 暴露
+                level: reusedLevel,
                 reasoning: "(画面无显著变化，复用上次判断)",
                 reminder: "",
                 fromAI: false, hasChanged: false,

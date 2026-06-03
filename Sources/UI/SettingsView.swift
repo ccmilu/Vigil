@@ -2,7 +2,8 @@ import SwiftUI
 import KeyboardShortcuts
 
 struct SettingsView: View {
-    @StateObject private var store = ProviderStore()
+    @EnvironmentObject private var store: ProviderStore
+    @EnvironmentObject private var settings: AppSettings
 
     var body: some View {
         TabView {
@@ -10,10 +11,105 @@ struct SettingsView: View {
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
             ProvidersTab(store: store)
                 .tabItem { Label("AI", systemImage: "brain") }
+            CaptureTab(settings: settings)
+                .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
             StorageTab()
                 .tabItem { Label("Storage", systemImage: "externaldrive") }
+            DebugTab(settings: settings)
+                .tabItem { Label("Debug", systemImage: "ladybug") }
         }
-        .frame(minWidth: 640, idealWidth: 680, minHeight: 500, idealHeight: 540)
+        .frame(minWidth: 640, idealWidth: 680, minHeight: 500, idealHeight: 560)
+    }
+}
+
+private struct CaptureTab: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Form {
+            Section("画面变化阈值（dHash 汉明距离）") {
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: { Double(settings.dhashThreshold) },
+                            set: { settings.dhashThreshold = Int($0) }
+                        ),
+                        in: 0...100, step: 5
+                    )
+                    Text("\(settings.dhashThreshold)")
+                        .frame(width: 36, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+                Text("256-bit 下经验值：15~30 微小变化，30~60 明显变化，60+ 大变化。默认 30。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("时间兜底（即使画面没变也至少 X 秒调一次 AI）") {
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: { Double(settings.maxAIIntervalSec) },
+                            set: { settings.maxAIIntervalSec = Int($0) }
+                        ),
+                        in: 10...120, step: 5
+                    )
+                    Text("\(settings.maxAIIntervalSec)s")
+                        .frame(width: 48, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+                Text("默认 30s。设小耗 token 多但更敏感；设大省 token。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("空闲判定（用户无输入多久算 idle）") {
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: { Double(settings.idleThresholdSec) },
+                            set: { settings.idleThresholdSec = Int($0) }
+                        ),
+                        in: 30...300, step: 10
+                    )
+                    Text("\(settings.idleThresholdSec)s")
+                        .frame(width: 48, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+                Text("默认 60s。空闲时段标 idle 且不调 AI。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.bottom, 8)
+    }
+}
+
+private struct DebugTab: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("记录完整 prompt 进出", isOn: $settings.debugEnabled)
+                Text("开启后，每个 session 目录下会生成 prompts.jsonl，记录每次 AI 调用的 system / user prompt、是否带图、完整响应、耗时。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("查看日志") {
+                Button {
+                    NSWorkspace.shared.open(ScreenshotStore.rootDirectory)
+                } label: {
+                    Label("打开 sessions 目录", systemImage: "folder")
+                }
+                Text("各 session 目录里：\n• diagnostic.jsonl — 每帧决策（dHash 距离、是否调 AI、level）\n• prompts.jsonl — 完整 prompt（仅 debug 开启）\n• *.jpg — 调 AI 时落盘的截图")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 

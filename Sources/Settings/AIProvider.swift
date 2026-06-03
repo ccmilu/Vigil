@@ -40,13 +40,14 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
         self.enabled = enabled
     }
 
-    /// 构造对应的 AIService。
-    func makeService() -> AIService {
+    /// 构造对应的 AIService。debugSink 非 nil 时启用 prompts.jsonl 记录。
+    func makeService(debugSink: AIDebugSink? = nil) -> AIService {
         let url = URL(string: baseURL) ?? DemoConfig.baseURL
         return OpenAICompatibleService(
             baseURL: url,
             model: model,
-            apiKey: apiKey
+            apiKey: apiKey,
+            debugSink: debugSink
         )
     }
 }

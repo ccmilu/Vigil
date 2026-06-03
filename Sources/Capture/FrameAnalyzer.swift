@@ -186,7 +186,8 @@ actor FrameAnalyzer {
             ai: ai,
             latencyMs: latencyMs,
             hasChanged: hasChanged,
-            at: now
+            at: now,
+            lastKnownLevel: lastLevel
         )
     }
 
@@ -239,6 +240,8 @@ struct FrameTickResult: Sendable {
     let latencyMs: Int
     let hasChanged: Bool
     let at: Date
+    /// 距上次"已被 AI 判定"的 level；用于复用分支正确填 level
+    let lastKnownLevel: FocusLevel?
 }
 
 /// 让 actor 调 @MainActor 函数的小帮手，避免到处 await MainActor.run。

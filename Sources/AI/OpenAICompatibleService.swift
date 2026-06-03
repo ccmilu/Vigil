@@ -13,70 +13,102 @@ struct OpenAICompatibleService: AIService {
     let apiKey: String
     let session: URLSession
     let timeout: TimeInterval
+    let debugSink: AIDebugSink?
 
     init(
         baseURL: URL = DemoConfig.baseURL,
         model: String = DemoConfig.model,
         apiKey: String = DemoConfig.apiKey,
         session: URLSession = .shared,
-        timeout: TimeInterval = DemoConfig.requestTimeout
+        timeout: TimeInterval = DemoConfig.requestTimeout,
+        debugSink: AIDebugSink? = nil
     ) {
         self.baseURL = baseURL
         self.model = model
         self.apiKey = apiKey
         self.session = session
         self.timeout = timeout
+        self.debugSink = debugSink
     }
 
     // MARK: - AIService
 
     func analyzeTask(_ promise: String) async throws -> TaskAnalysis {
-        let raw = try await chatText(
-            system: PromptTemplates.analyzeTaskSystem,
-            user: PromptTemplates.analyzeTaskUser(promise: promise),
-            temperature: 0.3
-        )
+        let system = PromptTemplates.analyzeTaskSystem
+        let user = PromptTemplates.analyzeTaskUser(promise: promise)
+        let raw = try await loggedChat(
+            stage: "analyzeTask",
+            system: system, user: user, hasImage: false
+        ) { try await chatText(system: system, user: user, temperature: 0.3) }
         return try Self.decode(TaskAnalysis.self, from: raw)
     }
 
     func analyzeFrame(_ input: FrameAnalysisInput) async throws -> FrameAnalysis {
+        let system = PromptTemplates.analyzeFrameSystem
         let user = PromptTemplates.analyzeFrameUser(
             promise: input.promise,
             appName: input.appName,
             windowTitles: input.windowTitles
         )
-        let raw: String
-        if let jpeg = input.screenshotJPEG {
-            raw = try await chatVision(
-                system: PromptTemplates.analyzeFrameSystem,
-                user: user,
-                imageJPEG: jpeg,
-                temperature: 0.3
-            )
-        } else {
-            raw = try await chatText(
-                system: PromptTemplates.analyzeFrameSystem,
-                user: user,
-                temperature: 0.3
-            )
+        let raw = try await loggedChat(
+            stage: "analyzeFrame",
+            system: system, user: user, hasImage: input.screenshotJPEG != nil
+        ) {
+            if let jpeg = input.screenshotJPEG {
+                return try await chatVision(system: system, user: user, imageJPEG: jpeg, temperature: 0.3)
+            } else {
+                return try await chatText(system: system, user: user, temperature: 0.3)
+            }
         }
         return try Self.decode(FrameAnalysis.self, from: raw)
     }
 
     func summarize(_ input: SummaryInput) async throws -> String {
-        try await chatText(
-            system: PromptTemplates.summarizeSystem,
-            user: PromptTemplates.summarizeUser(
-                promise: input.promise,
-                sessionSeconds: input.sessionSeconds,
-                fullySec: input.fullySec,
-                wanderingSec: input.wanderingSec,
-                distractedSec: input.distractedSec,
-                idleSec: input.idleSec,
-                distractedNotes: input.distractedNotes
-            ),
-            temperature: 0.7
+        let system = PromptTemplates.summarizeSystem
+        let user = PromptTemplates.summarizeUser(
+            promise: input.promise,
+            sessionSeconds: input.sessionSeconds,
+            fullySec: input.fullySec,
+            wanderingSec: input.wanderingSec,
+            distractedSec: input.distractedSec,
+            idleSec: input.idleSec,
+            distractedNotes: input.distractedNotes
         )
+        return try await loggedChat(
+            stage: "summarize",
+            system: system, user: user, hasImage: false
+        ) { try await chatText(system: system, user: user, temperature: 0.7) }
+    }
+
+    // MARK: - debug wrapper
+
+    private func loggedChat(
+        stage: String,
+        system: String, user: String, hasImage: Bool,
+        run: () async throws -> String
+    ) async throws -> String {
+        let start = Date()
+        do {
+            let raw = try await run()
+            if let sink = debugSink {
+                let latency = Int(Date().timeIntervalSince(start) * 1000)
+                await sink.record(
+                    stage: stage, systemPrompt: system, userPrompt: user,
+                    hasImage: hasImage, responseRaw: raw, latencyMs: latency
+                )
+            }
+            return raw
+        } catch {
+            if let sink = debugSink {
+                let latency = Int(Date().timeIntervalSince(start) * 1000)
+                await sink.record(
+                    stage: stage, systemPrompt: system, userPrompt: user,
+                    hasImage: hasImage, responseRaw: "", latencyMs: latency,
+                    error: error.localizedDescription
+                )
+            }
+            throw error
+        }
     }
 
     // MARK: - Internal: 纯文本 chat
