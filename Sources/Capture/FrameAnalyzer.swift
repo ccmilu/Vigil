@@ -116,14 +116,27 @@ actor FrameAnalyzer {
             )
         }
         do {
-            let result = try await service.analyzeFrame(
-                FrameAnalysisInput(
-                    promise: currentPromise,
-                    appName: front.appName,
-                    windowTitles: front.windowTitles,
-                    screenshotJPEG: jpeg
-                )
-            )
+            // 硬超时熔断：服务的 URLSession timeout 是软上限，这里加一层任务级超时，
+            // 超过 frameAnalysisHardTimeout 立即抛错，避免单次卡住吃掉多个 tick。
+            let result = try await withThrowingTaskGroup(of: FrameAnalysis.self) { group in
+                group.addTask { [service, currentPromise, front, jpeg] in
+                    try await service.analyzeFrame(
+                        FrameAnalysisInput(
+                            promise: currentPromise,
+                            appName: front.appName,
+                            windowTitles: front.windowTitles,
+                            screenshotJPEG: jpeg
+                        )
+                    )
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: UInt64(DemoConfig.frameAnalysisHardTimeout * 1_000_000_000))
+                    throw AIServiceError.network(URLError(.timedOut))
+                }
+                let first = try await group.next()!
+                group.cancelAll()
+                return first
+            }
             let latency = Int(Date().timeIntervalSince(start) * 1000)
             let hasChanged = lastLevel != nil && lastLevel != result.level
             lastAnalyzedHash = hash

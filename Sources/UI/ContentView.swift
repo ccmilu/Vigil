@@ -15,6 +15,12 @@ struct ContentView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            // 休息结束时自动召唤 Promise 面板，让"倒计时结束"有明确的下一步
+            sessionMgr.onBreakFinished = {
+                PromisePanel.show(sessionMgr: sessionMgr)
+            }
+        }
     }
 
     // MARK: - Header
@@ -210,24 +216,43 @@ struct ContentView: View {
         }
     }
 
+    @State private var confirmAbortBreak = false
+
     private func restingView(remaining: TimeInterval) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                Label("Resting", systemImage: "cup.and.saucer.fill")
-                    .foregroundStyle(.orange)
-                    .font(.headline)
-                Spacer()
-                Text(formatTime(remaining))
-                    .font(.system(size: 32, weight: .semibold, design: .monospaced))
-            }
-            Text("正在休息，期间不会监督屏幕。到时会通知你。")
+        VStack(alignment: .center, spacing: 20) {
+            Spacer()
+            Image(systemName: "cup.and.saucer.fill")
+                .font(.system(size: 56))
+                .foregroundStyle(.orange)
+            Text("休息中")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.orange)
+            Text(formatTime(remaining))
+                .font(.system(size: 56, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+            Text("期间不会监督屏幕。到时通知你并弹出下一轮承诺面板。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            HStack {
-                Spacer()
-                Button("结束休息") { sessionMgr.reset() }
-                    .controlSize(.large)
+                .multilineTextAlignment(.center)
+            Button("提前结束休息") {
+                confirmAbortBreak = true
             }
+            .controlSize(.regular)
+            .buttonStyle(.bordered)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .confirmationDialog(
+            "提前结束休息？",
+            isPresented: $confirmAbortBreak,
+            titleVisibility: .visible
+        ) {
+            Button("结束休息", role: .destructive) {
+                sessionMgr.abortBreak()
+            }
+            Button("继续休息", role: .cancel) {}
+        } message: {
+            Text("休息也是工作的一部分。要不要再坚持几分钟？")
         }
     }
 

@@ -4,6 +4,8 @@ import SwiftUI
 /// 全局可调参数（截屏阈值 + 调试开关），用 @AppStorage 存。
 @MainActor
 final class AppSettings: ObservableObject {
+    static let shared = AppSettings()
+
     @AppStorage("capture.dhashThreshold") var dhashThreshold: Int = 30
     @AppStorage("capture.maxAIIntervalSec") var maxAIIntervalSec: Int = 30
     @AppStorage("capture.idleThresholdSec") var idleThresholdSec: Int = 60

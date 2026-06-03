@@ -8,6 +8,9 @@ final class ProviderStore: ObservableObject {
     static let providersKey = "providers.json"
     static let selectedKey = "providers.selectedID"
 
+    /// 全局共享实例，保证 SessionManager 闭包和 SwiftUI Environment 拿到同一份状态
+    static let shared = ProviderStore()
+
     @Published var providers: [AIProvider]
     @Published var selectedID: UUID?
 

@@ -19,8 +19,10 @@ struct FocusApp: App {
     @StateObject private var sessionMgr: FocusSessionManager
 
     init() {
-        let providers = ProviderStore()
-        let settings = AppSettings()
+        // 用 shared 单例，避免 @StateObject 在多次 init 中创建临时实例导致
+        // serviceFactory 闭包捕获的 store 与 environment 暴露的 store 不一致
+        let providers = ProviderStore.shared
+        let settings = AppSettings.shared
         let mgr = FocusSessionManager(
             modelContainer: AppContainer.shared,
             settings: settings,

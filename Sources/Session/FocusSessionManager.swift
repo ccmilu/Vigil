@@ -72,7 +72,10 @@ final class FocusSessionManager: ObservableObject {
         phase = .idle
     }
 
-    /// 开始一段休息（不截屏、不调 AI），到时通知。
+    /// 通过 setter 暴露，让 ContentView 在休息结束时弹出 Promise 面板
+    var onBreakFinished: (@MainActor () -> Void)?
+
+    /// 开始一段休息（不截屏、不调 AI），到时通知 + 召唤 Promise 面板。
     func startBreak(durationSeconds: Int) {
         stopCountdown()
         stopTicking()
@@ -90,12 +93,20 @@ final class FocusSessionManager: ObservableObject {
                     DockBadge.setRemaining(seconds: nil)
                     await Notifier.notifyBreakEnd()
                     self.phase = .idle
+                    self.onBreakFinished?()
                 } else {
                     self.phase = .resting(remaining: remaining)
                     DockBadge.setRemaining(seconds: Int(remaining))
                 }
             }
         }
+    }
+
+    /// 提前结束休息（绕过倒计时）。UI 应做二次确认。
+    func abortBreak() {
+        stopCountdown()
+        DockBadge.setRemaining(seconds: nil)
+        phase = .idle
     }
 
     // MARK: - 起 session
