@@ -179,7 +179,7 @@ final class FocusSessionManager: ObservableObject {
         startTicking()
         DockBadge.setRemaining(seconds: durationSeconds)
         NotchTimer.shared.update(remaining: TimeInterval(durationSeconds), level: nil)
-        NotchTimer.shared.show()
+        NotchTimer.shared.show(promise: promise)
         SoundPlayer.shared.play(.start)
 
         return .success(s.id)
@@ -412,11 +412,12 @@ final class FocusSessionManager: ObservableObject {
                 createdAt: result.at,
                 analysisLatencyMs: result.latencyMs
             )
-            // 状态变化打通知 + 提示音 + 全屏遮罩
+            // 状态变化打通知 + 提示音 + 全屏遮罩 + 刘海 pulse
             if result.hasChanged, level == .distracted {
                 let reminder = result.ai?.reminder ?? ""
                 await Notifier.notifyDistraction(reminder: reminder)
                 SoundPlayer.shared.play(.distract)
+                NotchTimer.shared.flashDistracted(reminder: reminder)
                 DistractOverlay.shared.present(
                     reminder: reminder,
                     promise: session.promise
