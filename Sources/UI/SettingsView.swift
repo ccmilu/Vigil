@@ -129,7 +129,6 @@ private struct SoundTab: View {
                     }
                 }
                 .padding(12)
-                .background(Color.gray.opacity(0.05), in: .rect(cornerRadius: 6))
 
                 Text("鼠标悬停某个音名即可试听，点击选中")
                     .font(.caption2)
@@ -169,7 +168,6 @@ private struct SoundTab: View {
             }
         }
         .padding(12)
-        .background(Color.gray.opacity(0.05), in: .rect(cornerRadius: 6))
     }
 }
 
@@ -178,33 +176,18 @@ private struct SoundChip: View {
     let isSelected: Bool
     let onSelect: () -> Void
 
-    @State private var isHovering = false
-
     var body: some View {
         Button(action: onSelect) {
             Text(name)
                 .font(.caption)
-                .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(background)
-                .clipShape(.capsule)
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.2), lineWidth: 1)
-                )
         }
-        .buttonStyle(.plain)
+        .glassButtonStyle(prominent: isSelected)
+        .controlSize(.small)
         .onHover { hovering in
-            isHovering = hovering
             if hovering {
                 HoverSoundPreview.play(name)
             }
         }
-    }
-
-    private var background: Color {
-        if isSelected { return Color.accentColor.opacity(0.2) }
-        if isHovering { return Color.gray.opacity(0.15) }
-        return Color.gray.opacity(0.06)
     }
 }
 
@@ -273,7 +256,6 @@ private struct StorageTab: View {
                     .textSelection(.enabled)
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.gray.opacity(0.08), in: .rect(cornerRadius: 6))
                 Text("沙盒 App 的截图必须保存在 Container 内部目录；自定义路径需要 v0.2 用 Security-Scoped Bookmarks 处理。")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -465,8 +447,7 @@ struct ProvidersTab: View {
                 .buttonStyle(.borderless)
         }
         .padding(8)
-        .background(isEditing ? Color.accentColor.opacity(0.1) : Color.clear)
-        .clipShape(.rect(cornerRadius: 6))
+        .background(isEditing ? AnyShapeStyle(.selection) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 6))
     }
 
     private func isLocal(_ p: AIProvider) -> Bool {

@@ -32,11 +32,17 @@ final class PromisePanelWindow: NSPanel {
         titlebarAppearsTransparent = true
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
+        // 玻璃化：让 NSPanel 透明，由 SwiftUI 内容自己提供 material 背景
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        isMovableByWindowBackground = true
 
         contentViewController = NSHostingController(
             rootView: PromisePanelContent(sessionMgr: sessionMgr, dismiss: { [weak self] in
                 self?.close()
             })
+            .background(.thinMaterial)
         )
     }
     override func close() { super.close(); Self.shared = nil }
@@ -106,12 +112,8 @@ private struct PromisePanelContent: View {
                     .foregroundStyle(.secondary)
                 ForEach(presetMinutes, id: \.self) { m in
                     Button("\(m)") { durationMin = m }
-                        .buttonStyle(.bordered)
+                        .glassButtonStyle(prominent: durationMin == m)
                         .controlSize(.small)
-                        .background(
-                            durationMin == m ? Color.accentColor.opacity(0.15) : .clear,
-                            in: .rect(cornerRadius: 6)
-                        )
                 }
                 Text("分钟")
                     .font(.caption)
@@ -128,15 +130,15 @@ private struct PromisePanelContent: View {
                         Task { await onStartTapped() }
                     }
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
+                    .glassButtonStyle(prominent: true)
                     .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty || isStarting)
                 } else if aiUnreachable != nil {
                     Button("重试") { Task { await onStartTapped() } }
                     Button("仍然开始（离线）") { Task { await actuallyStart() } }
-                        .buttonStyle(.borderedProminent)
+                        .glassButtonStyle(prominent: true)
                 } else {
                     Button("仍然开始") { Task { await actuallyStart() } }
-                        .buttonStyle(.borderedProminent)
+                        .glassButtonStyle(prominent: true)
                         .disabled(isStarting)
                 }
             }

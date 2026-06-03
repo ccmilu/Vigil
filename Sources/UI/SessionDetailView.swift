@@ -19,7 +19,6 @@ struct SessionDetailView: View {
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(Color.gray.opacity(0.06), in: .rect(cornerRadius: 6))
                 }
                 .frame(maxHeight: 120)
             }
@@ -36,8 +35,12 @@ struct SessionDetailView: View {
         }
         .padding(20)
         .frame(width: 760, height: 580)
+        .background(.ultraThinMaterial)
+        .background(GlassWindowAccessor())
         .sheet(item: $previewURL) { url in
             ScreenshotPreviewSheet(url: url) { previewURL = nil }
+                .background(.ultraThinMaterial)
+                .background(GlassWindowAccessor())
         }
     }
 
@@ -99,7 +102,6 @@ struct SessionDetailView: View {
                 }
             }
         }
-        .background(Color.gray.opacity(0.04), in: .rect(cornerRadius: 6))
     }
 
     private func sortedRecords() -> [AnalysisRecord] {

@@ -173,8 +173,9 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
             HStack {
                 Button(actionTitle) { action() }
-                    .buttonStyle(.borderedProminent)
+                    .glassButtonStyle(prominent: true)
                 Button("重新检查") { Task { await recheck() } }
+                    .glassButtonStyle()
             }
         }
         .padding(.horizontal, 30).padding(.vertical, 24)
@@ -191,13 +192,13 @@ struct OnboardingView: View {
             Spacer()
             if step == .done {
                 Button("开始使用") { onFinish() }
-                    .buttonStyle(.borderedProminent)
+                    .glassButtonStyle(prominent: true)
                     .keyboardShortcut(.defaultAction)
             } else {
                 Button("下一步") {
                     if let next = Step(rawValue: step.rawValue + 1) { step = next }
                 }
-                .buttonStyle(.borderedProminent)
+                .glassButtonStyle(prominent: true)
                 .keyboardShortcut(.defaultAction)
             }
         }

@@ -63,14 +63,36 @@ struct FocusApp: App {
                         .transition(.opacity)
                 }
             }
+            .glassWindow()
         }
         .windowResizability(.contentSize)
+        .windowStyle(.hiddenTitleBar)
         .modelContainer(modelContainer)
 
         Settings {
             SettingsView()
                 .environmentObject(appSettings)
                 .environmentObject(providerStore)
+                .glassWindow()
+        }
+    }
+}
+
+extension View {
+    /// 把承载 SwiftUI Scene 的窗口背景换成液态玻璃 material，
+    /// 并让底层 NSWindow 透明，让 material 真正透出。
+    ///
+    /// macOS 15+ 用 containerBackground；macOS 14 用普通 background fallback。
+    @ViewBuilder
+    func glassWindow() -> some View {
+        if #available(macOS 15.0, *) {
+            self
+                .containerBackground(.thinMaterial, for: .window)
+                .background(GlassWindowAccessor(transparentTitlebar: true))
+        } else {
+            self
+                .background(.thinMaterial)
+                .background(GlassWindowAccessor(transparentTitlebar: true))
         }
     }
 }

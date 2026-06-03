@@ -13,7 +13,9 @@ struct ContentView: View {
                     header
                     phaseSection
                 }
-                .padding(24)
+                .padding(.horizontal, 24)
+                .padding(.top, 40)   // 让出 traffic lights 浮空的位置
+                .padding(.bottom, 24)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             Divider()
@@ -82,7 +84,7 @@ struct ContentView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
         }
-        .buttonStyle(.borderedProminent)
+        .glassButtonStyle(prominent: true)
         .controlSize(.large)
         .keyboardShortcut("n", modifiers: [.command])
     }
@@ -113,7 +115,6 @@ struct ContentView: View {
                 .foregroundStyle(.primary)
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.accentColor.opacity(0.08), in: .rect(cornerRadius: 8))
 
             if let last = sessionMgr.lastAnalysis {
                 latestAnalysisCard(last)
@@ -153,7 +154,6 @@ struct ContentView: View {
             .foregroundStyle(.tertiary)
         }
         .padding(10)
-        .background(Color.gray.opacity(0.06), in: .rect(cornerRadius: 6))
     }
 
     private func levelBadge(_ level: FocusLevel) -> some View {
@@ -188,7 +188,6 @@ struct ContentView: View {
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(Color.gray.opacity(0.06), in: .rect(cornerRadius: 6))
                     }
                     .frame(maxHeight: 140)
                 }
@@ -204,7 +203,7 @@ struct ContentView: View {
                     } label: {
                         Label("再来一轮", systemImage: "play.circle.fill")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .glassButtonStyle(prominent: true)
                     .controlSize(.large)
 
                     Menu {
@@ -250,7 +249,7 @@ struct ContentView: View {
                 confirmAbortBreak = true
             }
             .controlSize(.regular)
-            .buttonStyle(.bordered)
+            .glassButtonStyle()
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -305,7 +304,7 @@ struct ContentView: View {
                 .font(.system(.body, design: .monospaced))
                 .textSelection(.enabled)
                 .padding(10)
-                .background(Color.red.opacity(0.08), in: .rect(cornerRadius: 6))
+                .foregroundStyle(.red)
         }
     }
 
@@ -315,18 +314,37 @@ struct ContentView: View {
     private var sessions: [FocusSession]
 
     @State private var selectedSession: FocusSession?
+    @State private var historyExpanded: Bool = false
+
+    /// 默认折叠时最多显示几条历史
+    private static let historyCollapsedLimit = 8
+
+    private var visibleSessions: [FocusSession] {
+        if historyExpanded {
+            return Array(sessions)
+        }
+        return Array(sessions.prefix(Self.historyCollapsedLimit))
+    }
 
     private var historyList: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("历史会话")
-                .font(.caption.smallCaps())
-                .foregroundStyle(.secondary)
+            HStack {
+                Text("历史会话")
+                    .font(.caption.smallCaps())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !sessions.isEmpty {
+                    Text("共 \(sessions.count) 条")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
             if sessions.isEmpty {
                 Text("还没有会话")
                     .foregroundStyle(.tertiary)
                     .font(.callout)
             } else {
-                ForEach(sessions.prefix(8), id: \.id) { s in
+                ForEach(visibleSessions, id: \.id) { s in
                     Button {
                         selectedSession = s
                     } label: {
@@ -343,6 +361,27 @@ struct ContentView: View {
                         }
                         .padding(.vertical, 4)
                         .padding(.horizontal, 6)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                }
+                if sessions.count > Self.historyCollapsedLimit {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            historyExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: historyExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption2)
+                            Text(historyExpanded
+                                 ? "收起"
+                                 : "展开全部（还有 \(sessions.count - Self.historyCollapsedLimit) 条）")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
