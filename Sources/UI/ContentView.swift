@@ -135,7 +135,12 @@ struct ContentView: View {
                 if let d = r.dhashDistance {
                     Text("dHash=\(d)")
                 }
-                Text(r.fromAI ? "AI" : "复用")
+                if r.fromAI {
+                    Label("AI 含截图", systemImage: "camera.fill")
+                        .help("本帧已把截图发给 AI；要看模型实际收到的 prompt，开启 Settings → Debug")
+                } else {
+                    Text("复用")
+                }
             }
             .font(.caption2)
             .foregroundStyle(.tertiary)
@@ -257,18 +262,32 @@ struct ContentView: View {
     }
 
     private func ratiosBar(_ s: FocusSession) -> some View {
-        HStack(spacing: 4) {
-            Rectangle().fill(.green).frame(maxWidth: .infinity)
-                .scaleEffect(x: max(CGFloat(s.fullyRatio), 0.01), anchor: .leading)
-            Rectangle().fill(.yellow).frame(maxWidth: .infinity)
-                .scaleEffect(x: max(CGFloat(s.wanderingRatio), 0.01), anchor: .leading)
-            Rectangle().fill(.red).frame(maxWidth: .infinity)
-                .scaleEffect(x: max(CGFloat(s.distractedRatio), 0.01), anchor: .leading)
-            Rectangle().fill(.gray).frame(maxWidth: .infinity)
-                .scaleEffect(x: max(CGFloat(s.idleRatio), 0.01), anchor: .leading)
+        VStack(alignment: .leading, spacing: 6) {
+            StackedRatioBar(
+                segments: [
+                    (.green, s.fullyRatio),
+                    (.yellow, s.wanderingRatio),
+                    (.red, s.distractedRatio),
+                    (.gray, s.idleRatio)
+                ],
+                height: 12
+            )
+            HStack(spacing: 14) {
+                ratioLegend(.green, "专注", s.fullyRatio)
+                ratioLegend(.yellow, "走神", s.wanderingRatio)
+                ratioLegend(.red, "分心", s.distractedRatio)
+                ratioLegend(.gray, "空闲", s.idleRatio)
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
-        .frame(height: 8)
-        .clipShape(.rect(cornerRadius: 4))
+    }
+
+    private func ratioLegend(_ color: Color, _ label: String, _ ratio: Double) -> some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
+            Text("\(label) \(Int(ratio * 100))%")
+        }
     }
 
     private func errorView(_ msg: String) -> some View {

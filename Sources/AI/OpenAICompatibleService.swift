@@ -80,6 +80,22 @@ struct OpenAICompatibleService: AIService {
         ) { try await chatText(system: system, user: user, temperature: 0.7) }
     }
 
+    // MARK: - 视觉能力探测（Settings 里用）
+
+    /// 给一张图，要求模型描述图中内容；用于人工验证"模型确实能看到图"。
+    func describeImage(_ jpeg: Data) async throws -> String {
+        return try await chatVision(
+            system: """
+            You will be shown ONE image. Describe in ONE concise Simplified Chinese sentence \
+            what specific content (windows, text, app, colors, layout) you can see in the image. \
+            If you receive no image or the image is blank, reply EXACTLY: 我没有看到图片。
+            """,
+            user: "Describe what you see.",
+            imageJPEG: jpeg,
+            temperature: 0.2
+        )
+    }
+
     // MARK: - debug wrapper
 
     private func loggedChat(

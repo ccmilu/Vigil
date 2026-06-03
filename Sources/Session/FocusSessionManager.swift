@@ -115,16 +115,25 @@ final class FocusSessionManager: ObservableObject {
     // MARK: - 起 session
 
     /// 起一次会话；成功返回 sessionID。
-    /// 先校验 promise 是否足够具体。返回 suggestion 非空时调用方应让用户改 promise 再起跑。
-    /// 网络错误返回 nil（不阻塞起跑）。
-    func validatePromise(_ promise: String) async -> String? {
+    /// promise 校验的三种结果
+    enum PromiseValidation {
+        case clear                          // 通过校验
+        case needsClarification(String)     // AI 反问，需要改 promise
+        case serviceUnreachable(String)     // AI 服务不通；UI 应阻塞 + 提示 + 允许"离线启动"
+    }
+
+    /// 校验 promise + 顺带探活 AI 服务。
+    func validatePromise(_ promise: String) async -> PromiseValidation {
         self.service = serviceFactory(nil)
         do {
             let result = try await service.analyzeTask(promise)
-            return result.suggestion
+            if let s = result.suggestion, !s.isEmpty {
+                return .needsClarification(s)
+            }
+            return .clear
         } catch {
-            logger.warning("analyzeTask 失败，跳过校验：\(error.localizedDescription)")
-            return nil
+            logger.warning("analyzeTask 失败：\(error.localizedDescription)")
+            return .serviceUnreachable((error as? LocalizedError)?.errorDescription ?? "\(error)")
         }
     }
 

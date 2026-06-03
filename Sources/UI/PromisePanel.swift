@@ -51,7 +51,8 @@ private struct PromisePanelContent: View {
     @State private var promise: String = ""
     @State private var durationMin: Int = 25
     @State private var isStarting = false
-    @State private var aiSuggestion: String? = nil  // 非 nil 说明 promise 不够具体
+    @State private var aiSuggestion: String? = nil   // 非 nil 说明 promise 不够具体
+    @State private var aiUnreachable: String? = nil  // 非 nil 说明 AI 服务连不上
     @State private var hasAskedAI = false
     @FocusState private var focused: Bool
 
@@ -81,6 +82,23 @@ private struct PromisePanelContent: View {
                 .background(Color.orange.opacity(0.1), in: .rect(cornerRadius: 6))
             }
 
+            if let unreachable = aiUnreachable {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .foregroundStyle(.red)
+                        Text("无法连接 AI 服务")
+                            .font(.callout.weight(.medium))
+                    }
+                    Text(unreachable)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+                .padding(10)
+                .background(Color.red.opacity(0.08), in: .rect(cornerRadius: 6))
+            }
+
             HStack(spacing: 8) {
                 Text("时长")
                     .font(.callout)
@@ -104,11 +122,17 @@ private struct PromisePanelContent: View {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
 
-                if aiSuggestion == nil {
-                    Button("Start \(durationMin) min") { Task { await onStartTapped() } }
-                        .keyboardShortcut(.defaultAction)
+                if aiSuggestion == nil && aiUnreachable == nil {
+                    Button(isStarting ? "校验中…" : "Start \(durationMin) min") {
+                        Task { await onStartTapped() }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty || isStarting)
+                } else if aiUnreachable != nil {
+                    Button("重试") { Task { await onStartTapped() } }
+                    Button("仍然开始（离线）") { Task { await actuallyStart() } }
                         .buttonStyle(.borderedProminent)
-                        .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty || isStarting)
                 } else {
                     Button("仍然开始") { Task { await actuallyStart() } }
                         .buttonStyle(.borderedProminent)
@@ -125,27 +149,31 @@ private struct PromisePanelContent: View {
             }
         }
         .onChange(of: promise) { _, _ in
-            // 用户改了 promise 后清除上次的反问
+            // 用户改了 promise 后清除上次的反问 / 错误
             aiSuggestion = nil
+            aiUnreachable = nil
             hasAskedAI = false
         }
     }
 
-    /// 第一次点 Start：先调 validatePromise 校验
+    /// 第一次点 Start：先调 validatePromise 校验 + 探活
     private func onStartTapped() async {
         let trimmed = promise.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isStarting = true
         defer { isStarting = false }
+        aiSuggestion = nil
+        aiUnreachable = nil
 
-        if !hasAskedAI {
+        switch await sessionMgr.validatePromise(trimmed) {
+        case .clear:
+            await actuallyStart()
+        case .needsClarification(let s):
+            aiSuggestion = s
             hasAskedAI = true
-            if let suggestion = await sessionMgr.validatePromise(trimmed), !suggestion.isEmpty {
-                aiSuggestion = suggestion
-                return
-            }
+        case .serviceUnreachable(let msg):
+            aiUnreachable = msg
         }
-        await actuallyStart()
     }
 
     /// 用户改完 promise 后点"仍然开始"，跳过二次校验

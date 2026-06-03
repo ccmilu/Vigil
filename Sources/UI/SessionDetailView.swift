@@ -60,19 +60,16 @@ struct SessionDetailView: View {
     }
 
     private var distributionBar: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Rectangle().fill(.green).frame(maxWidth: .infinity)
-                    .scaleEffect(x: max(CGFloat(session.fullyRatio), 0.005), anchor: .leading)
-                Rectangle().fill(.yellow).frame(maxWidth: .infinity)
-                    .scaleEffect(x: max(CGFloat(session.wanderingRatio), 0.005), anchor: .leading)
-                Rectangle().fill(.red).frame(maxWidth: .infinity)
-                    .scaleEffect(x: max(CGFloat(session.distractedRatio), 0.005), anchor: .leading)
-                Rectangle().fill(.gray).frame(maxWidth: .infinity)
-                    .scaleEffect(x: max(CGFloat(session.idleRatio), 0.005), anchor: .leading)
-            }
-            .frame(height: 10)
-            .clipShape(.rect(cornerRadius: 5))
+        VStack(alignment: .leading, spacing: 6) {
+            StackedRatioBar(
+                segments: [
+                    (.green, session.fullyRatio),
+                    (.yellow, session.wanderingRatio),
+                    (.red, session.distractedRatio),
+                    (.gray, session.idleRatio)
+                ],
+                height: 12
+            )
             HStack(spacing: 14) {
                 legend(color: .green, label: "fully", ratio: session.fullyRatio)
                 legend(color: .yellow, label: "wandering", ratio: session.wanderingRatio)

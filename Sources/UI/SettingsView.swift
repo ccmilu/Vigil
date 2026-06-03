@@ -280,17 +280,24 @@ private struct ProvidersTab: View {
                         self.editing = nil
                     },
                     onTest: { p in
-                        testResult = "测试中…"
-                        Task {
-                            testResult = await testConnectivity(p)
-                        }
+                        testResult = "连通测试中…"
+                        Task { testResult = await testConnectivity(p) }
+                    },
+                    onTestVision: { p in
+                        testResult = "视觉测试中（约 5-15s）…"
+                        Task { testResult = await testVision(p) }
                     }
                 )
                 if let result = testResult {
-                    Text(result)
-                        .font(.callout)
-                        .foregroundStyle(result.contains("✓") ? .green : .red)
-                        .padding(.top, 4)
+                    ScrollView {
+                        Text(result)
+                            .font(.callout)
+                            .foregroundStyle(result.contains("✓") ? .green : .red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 100)
+                    .padding(.top, 4)
                 }
             }
         }
@@ -347,6 +354,30 @@ private struct ProvidersTab: View {
             return "✗ \(error.localizedDescription)"
         }
     }
+
+    private func testVision(_ p: AIProvider) async -> String {
+        guard let svc = p.makeService() as? OpenAICompatibleService else {
+            return "✗ 当前 provider 不支持视觉测试"
+        }
+        do {
+            let mgr = ScreenCaptureManager()
+            let img = try await mgr.captureMainDisplay()
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("focus-vision-test.jpg")
+            try mgr.encodeAndWrite(img, to: tempURL)
+            let jpeg = try Data(contentsOf: tempURL)
+            try? FileManager.default.removeItem(at: tempURL)
+
+            let answer = try await svc.describeImage(jpeg)
+            let trimmed = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.contains("没有看到图片") || trimmed.contains("看不到") {
+                return "✗ 模型回复看不到图片——可能不是多模态，或没加载视觉权重。\n原回复：\(trimmed)"
+            }
+            return "✓ 模型确实收到了图片，描述：\n\(trimmed)"
+        } catch {
+            return "✗ \(error.localizedDescription)"
+        }
+    }
 }
 
 private struct ProviderEditor: View {
@@ -354,6 +385,7 @@ private struct ProviderEditor: View {
     let onSave: (AIProvider) -> Void
     let onDelete: () -> Void
     let onTest: (AIProvider) -> Void
+    let onTestVision: (AIProvider) -> Void
 
     var body: some View {
         Form {
@@ -368,8 +400,10 @@ private struct ProviderEditor: View {
         .padding(.top, 4)
         .onChange(of: provider) { _, new in onSave(new) }
 
-        HStack {
+        HStack(spacing: 8) {
             Button("测试连通性") { onTest(provider) }
+            Button("测试视觉") { onTestVision(provider) }
+                .help("截当前屏 + 让模型描述，验证模型是否真有视觉能力")
             Spacer()
             Button("删除", role: .destructive) { onDelete() }
         }
