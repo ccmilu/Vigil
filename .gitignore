@@ -1,0 +1,39 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/
+!project.yml
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.xccheckout
+*.moved-aside
+*.swp
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# 临时/本地
+.env
+.env.local
+*.log
+tmp/
+*.tmp
+.vscode/
+
+# 测试覆盖率与产物
+*.profraw
+*.profdata
+
+# 本地配置（含 API Key、本地服务地址等敏感信息）
+Sources/Config/LocalConfig.swift
