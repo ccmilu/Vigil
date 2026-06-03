@@ -1,57 +1,41 @@
 import AppKit
 import SwiftUI
 
-// MARK: - ✏️ 你可以微调的参数都在这里
+// MARK: - ✏️ 可调参数
 
-/// 调这些常量，然后用 Xcode 打开本文件，光标点进 `#Preview { ... }`，
-/// 右上角 Editor → Canvas（或 ⌥⌘↩）打开预览。
-/// 实时拖动 hovering / distracted 模拟两种状态。
+/// 改下面这些常量，光标点进文件底部 `#Preview` 任一段，按 ⌥⌘↩ 打开 Canvas 实时预览。
+///
+/// 默认 autoDetect=true 时，折叠态宽高自动跟随物理刘海尺寸；
+/// 关掉 autoDetect 用下面的手动值。
 enum NotchStyle {
-    // MARK: 尺寸（高度尽量贴菜单栏）
-    /// 折叠态宽度
-    static let collapsedWidth: CGFloat = 360
-    /// 折叠态高度 — 默认匹配 macOS 菜单栏高度
-    static let collapsedHeight: CGFloat = 26
+    /// 自动检测物理刘海宽度 + 菜单栏高度（推荐）
+    static let autoDetect: Bool = true
 
-    /// 展开态宽度
+    // ===== 手动尺寸（autoDetect=false 时生效）=====
+    static let manualCollapsedWidth: CGFloat = 220
+    static let manualCollapsedHeight: CGFloat = 32
+
+    // ===== 展开态尺寸 =====
     static let expandedWidth: CGFloat = 520
-    /// 展开态高度（向菜单栏下方延伸）
-    static let expandedHeight: CGFloat = 110
+    static let expandedHeight: CGFloat = 130
 
-    // MARK: 形状圆角
-    /// 顶部圆角（顶边贴菜单栏，给一点点圆滑）
-    static let topCornerRadius: CGFloat = 6
-    /// 底部圆角（不要太圆）
-    static let bottomCornerRadius: CGFloat = 12
+    // ===== 形状圆角 =====
+    /// 顶部 concave 圆角（反向，圆心在外）
+    static let topCornerRadius: CGFloat = 8
+    /// 底部 convex 圆角（正向，圆心在内）
+    static let bottomCornerRadius: CGFloat = 14
 
-    // MARK: 位置
-    /// 整个 NSPanel 的水平位置：在屏幕水平居中。
-    /// 物理刘海大约从屏幕中央左右各 110pt（约 220pt 宽），
-    /// 所以岛的宽度建议 > 220 让左右两端伸出刘海，内容才看得见。
-    static let horizontalCenter = true
-
-    /// 顶部 Y 偏移（pt）：0 = 紧贴屏幕最顶部（盖菜单栏中央）；
-    /// 正值 = 向下挪一点。
-    static let topOffset: CGFloat = 0
-
-    // MARK: 内容布局（避开物理刘海中央摄像头区域）
-    /// 折叠态内容贴向岛的哪一侧：
-    /// - .leading 显示在岛左端（露出刘海左边）
-    /// - .trailing 显示在岛右端（露出刘海右边）
-    /// - .center 显示在岛中央（会被刘海遮住一部分）
-    /// - .split 倒计时在左端 + level 圆点在右端
+    // ===== 内容布局 =====
+    /// 折叠态内容贴向哪一侧（避开物理刘海摄像头中央区域）
     static let collapsedContentAlignment: ContentAlignment = .split
 
-    // MARK: distracted 红色描边
+    // ===== distracted 描边 =====
     static let distractedBorderWidth: CGFloat = 2.0
     static let distractedBorderColor: Color = .red
 
-    // MARK: 动画
-    /// 形变 spring 参数
+    // ===== 动画 =====
     static let springResponse: Double = 0.42
     static let springDamping: Double = 0.78
-
-    /// distracted 跳变时强制展开的秒数
     static let distractedFlashSeconds: TimeInterval = 6
 
     enum ContentAlignment {
@@ -99,14 +83,15 @@ final class NotchTimer: ObservableObject {
 
     private func createWindow() {
         guard let screen = NSScreen.main else { return }
-        // 用 expanded 尺寸作为 panel 大小（折叠态居中放在里面）
-        let size = NSSize(width: NotchStyle.expandedWidth + 40, height: NotchStyle.expandedHeight + 8)
+        // panel 尺寸用 expanded 上限做窗口大小；岛在内部居中缩放
+        let panelW = NotchStyle.expandedWidth + 40
+        let panelH = NotchStyle.expandedHeight + 8
         let origin = NSPoint(
-            x: screen.frame.midX - size.width / 2,
-            y: screen.frame.maxY - size.height - NotchStyle.topOffset
+            x: screen.frame.midX - panelW / 2,
+            y: screen.frame.maxY - panelH  // 顶贴菜单栏
         )
         let panel = FloatingNotchPanel(
-            contentRect: NSRect(origin: origin, size: size),
+            contentRect: NSRect(origin: origin, size: NSSize(width: panelW, height: panelH)),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered, defer: false
         )
@@ -135,12 +120,22 @@ struct NotchView: View {
     @State private var hovering = false
     @State private var now = Date()
 
+    /// 折叠态宽度：autoDetect 时跟随物理刘海
+    private var collapsedWidth: CGFloat {
+        NotchStyle.autoDetect ? ScreenMetrics.notchWidth : NotchStyle.manualCollapsedWidth
+    }
+
+    /// 折叠态高度：autoDetect 时跟随菜单栏高度
+    private var collapsedHeight: CGFloat {
+        NotchStyle.autoDetect ? ScreenMetrics.menuBarHeight : NotchStyle.manualCollapsedHeight
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             island
                 .frame(
-                    width: isExpanded ? NotchStyle.expandedWidth : NotchStyle.collapsedWidth,
-                    height: isExpanded ? NotchStyle.expandedHeight : NotchStyle.collapsedHeight
+                    width: isExpanded ? NotchStyle.expandedWidth : collapsedWidth,
+                    height: isExpanded ? NotchStyle.expandedHeight : collapsedHeight
                 )
                 .animation(
                     .spring(response: NotchStyle.springResponse, dampingFraction: NotchStyle.springDamping),
@@ -162,13 +157,12 @@ struct NotchView: View {
 
     private var isDistracted: Bool { state.level == .distracted }
 
-    /// 岛本体 — 黑色背景 + 描边都画在同一形状里，保证缩放完全同步
+    /// 岛本体 — 反向圆角形状 + 描边 + 内容，共享同一 shape 保证缩放同步
     private var island: some View {
         ZStack {
             shape
                 .fill(.black)
                 .overlay(
-                    // 描边在 fill 之上叠加，share 同一份 frame
                     shape.stroke(
                         isDistracted ? NotchStyle.distractedBorderColor : Color.white.opacity(0.08),
                         lineWidth: isDistracted ? NotchStyle.distractedBorderWidth : 0.5
@@ -186,12 +180,10 @@ struct NotchView: View {
         }
     }
 
-    private var shape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            topLeadingRadius: NotchStyle.topCornerRadius,
-            bottomLeadingRadius: NotchStyle.bottomCornerRadius,
-            bottomTrailingRadius: NotchStyle.bottomCornerRadius,
-            topTrailingRadius: NotchStyle.topCornerRadius
+    private var shape: NotchShape {
+        NotchShape(
+            topCornerRadius: NotchStyle.topCornerRadius,
+            bottomCornerRadius: NotchStyle.bottomCornerRadius
         )
     }
 
@@ -210,42 +202,36 @@ struct NotchView: View {
         Group {
             switch NotchStyle.collapsedContentAlignment {
             case .leading:
-                HStack {
-                    collapsedItem
-                    Spacer()
-                }
+                HStack { collapsedItem; Spacer() }
             case .trailing:
-                HStack {
-                    Spacer()
-                    collapsedItem
-                }
+                HStack { Spacer(); collapsedItem }
             case .center:
                 collapsedItem
             case .split:
                 HStack {
-                    // 左端：level 圆点
                     Circle()
                         .fill(levelColor)
-                        .frame(width: 8, height: 8)
+                        .frame(width: 6, height: 6)
                     Spacer()
-                    // 右端：倒计时
                     Text(formatTime(state.remaining))
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(.white)
                         .monospacedDigit()
                 }
             }
         }
-        .padding(.horizontal, 16)
+        // 在反向圆角的"咬"形里，内容要离边缘有距离才不会被切到
+        .padding(.horizontal, NotchStyle.topCornerRadius + NotchStyle.bottomCornerRadius + 6)
+        .padding(.bottom, 2)
     }
 
     private var collapsedItem: some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(levelColor)
-                .frame(width: 8, height: 8)
+                .frame(width: 6, height: 6)
             Text(formatTime(state.remaining))
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
                 .monospacedDigit()
         }
@@ -284,8 +270,8 @@ struct NotchView: View {
                     .padding(.top, 2)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
     }
 
     private var levelColor: Color {
@@ -314,7 +300,7 @@ struct NotchView: View {
     }
 }
 
-// MARK: - Preview（Xcode Canvas 实时预览）
+// MARK: - Preview
 
 #Preview("折叠态 · fully") {
     let state = NotchTimer.shared
@@ -322,17 +308,16 @@ struct NotchView: View {
     state.level = .fully
     state.promise = "完成 Focus 项目刘海调优"
     return NotchView(state: state)
-        .frame(width: 600, height: 200)
         .background(Color.blue.opacity(0.2))
 }
 
-#Preview("折叠态 · distracted") {
+#Preview("展开态 · distracted") {
     let state = NotchTimer.shared
     state.remaining = 1234
     state.level = .distracted
     state.promise = "完成 Focus 项目"
     state.reminder = "刚才在刷 YouTube；回到工作吧"
+    state.forceExpandUntil = Date().addingTimeInterval(60)
     return NotchView(state: state)
-        .frame(width: 600, height: 200)
         .background(Color.blue.opacity(0.2))
 }
