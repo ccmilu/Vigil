@@ -193,9 +193,13 @@ actor FrameAnalyzer {
     private func appendDiagnostic(_ line: String) {
         // 简单 append，错误忽略——诊断不应影响主流程
         if let h = try? FileHandle(forWritingTo: diagnosticLogURL) {
-            try? h.seekToEnd()
-            try? h.write(contentsOf: Data(line.utf8))
-            try? h.close()
+            do {
+                _ = try h.seekToEnd()
+                try h.write(contentsOf: Data(line.utf8))
+                try h.close()
+            } catch {
+                // 忽略写盘失败
+            }
         } else {
             try? line.write(to: diagnosticLogURL, atomically: true, encoding: .utf8)
         }

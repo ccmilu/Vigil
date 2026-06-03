@@ -1,20 +1,16 @@
 import AppKit
 import SwiftUI
 
-/// 一个轻量浮动面板：按 ⌘⌥Space 出现，输入承诺后回车提交。
-/// 这是后续做"专注会话起跑面板"的雏形。
+/// 按 ⇧⌘⌥Space 或主窗口按钮触发的"起 session"面板。
 enum PromisePanel {
-
     @MainActor
-    static func show(sessionVM: SessionViewModel) {
-        // 先把 App 拉到前台，否则 makeKey 可能没生效
+    static func show(sessionMgr: FocusSessionManager) {
         NSApp.activate(ignoringOtherApps: true)
-
         if let existing = PromisePanelWindow.shared {
             existing.makeKeyAndOrderFront(nil)
             return
         }
-        let win = PromisePanelWindow(sessionVM: sessionVM)
+        let win = PromisePanelWindow(sessionMgr: sessionMgr)
         PromisePanelWindow.shared = win
         win.center()
         win.makeKeyAndOrderFront(nil)
@@ -24,9 +20,9 @@ enum PromisePanel {
 final class PromisePanelWindow: NSPanel {
     nonisolated(unsafe) static var shared: PromisePanelWindow?
 
-    init(sessionVM: SessionViewModel) {
+    init(sessionMgr: FocusSessionManager) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 200),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 280),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -38,60 +34,81 @@ final class PromisePanelWindow: NSPanel {
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
 
-        let host = NSHostingController(
-            rootView: PromisePanelContent(sessionVM: sessionVM, dismiss: { [weak self] in
+        contentViewController = NSHostingController(
+            rootView: PromisePanelContent(sessionMgr: sessionMgr, dismiss: { [weak self] in
                 self?.close()
             })
         )
-        contentViewController = host
     }
-
-    override func close() {
-        super.close()
-        Self.shared = nil
-    }
-
+    override func close() { super.close(); Self.shared = nil }
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 }
 
 private struct PromisePanelContent: View {
-    @ObservedObject var sessionVM: SessionViewModel
+    let sessionMgr: FocusSessionManager
     let dismiss: () -> Void
 
     @State private var promise: String = ""
+    @State private var durationMin: Int = 25
+    @State private var isStarting = false
     @FocusState private var focused: Bool
 
+    private let presetMinutes = [10, 15, 25, 45, 60]
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             Text("This time I promise to...")
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            TextField("", text: $promise, axis: .vertical)
+            TextField("写一份周报", text: $promise, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.title3)
                 .lineLimit(2...4)
                 .focused($focused)
-                .onSubmit { Task { await submit() } }
+
+            HStack(spacing: 8) {
+                Text("时长")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                ForEach(presetMinutes, id: \.self) { m in
+                    Button("\(m)") {
+                        durationMin = m
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .background(
+                        durationMin == m ? Color.accentColor.opacity(0.15) : .clear,
+                        in: .rect(cornerRadius: 6)
+                    )
+                }
+                Text("分钟")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
 
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Start") { Task { await submit() } }
+                Button("Start \(durationMin) min") { Task { await submit() } }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
-                    .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty || isStarting)
             }
         }
-        .padding(20)
-        .frame(width: 480)
+        .padding(24)
+        .frame(width: 520)
         .onAppear { focused = true }
     }
 
     private func submit() async {
-        await sessionVM.submit(promise: promise)
+        let trimmed = promise.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isStarting = true
+        defer { isStarting = false }
+        _ = await sessionMgr.start(promise: trimmed, durationSeconds: durationMin * 60)
         dismiss()
     }
 }

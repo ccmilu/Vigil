@@ -1,10 +1,9 @@
 import SwiftUI
+import SwiftData
 import KeyboardShortcuts
 
-// 注册全局快捷键名（其它地方通过 .startPromise 引用即可）
 extension KeyboardShortcuts.Name {
-    // ⌘⌥Space 默认被 Spotlight 占用，这里改成 ⇧⌘⌥Space。
-    // 用户可在 Settings → Shortcuts 中重绑。
+    /// ⇧⌘⌥Space。⌘⌥Space 默认被 Spotlight 占用。
     static let startPromise = Self(
         "startPromise",
         default: .init(.space, modifiers: [.command, .option, .shift])
@@ -13,23 +12,31 @@ extension KeyboardShortcuts.Name {
 
 @main
 struct FocusApp: App {
-    @StateObject private var sessionVM = SessionViewModel()
+    private let modelContainer = AppContainer.shared
+
+    @StateObject private var sessionMgr: FocusSessionManager
+
+    init() {
+        let mgr = FocusSessionManager(modelContainer: AppContainer.shared)
+        _sessionMgr = StateObject(wrappedValue: mgr)
+    }
 
     var body: some Scene {
         WindowGroup("Focus") {
             ContentView()
-                .environmentObject(sessionVM)
-                .frame(minWidth: 520, minHeight: 360)
+                .environmentObject(sessionMgr)
+                .frame(minWidth: 560, minHeight: 420)
                 .task {
-                    // 启动时把 ⌘⌥Space 绑定到弹窗
-                    KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionVM] in
+                    await Notifier.requestAuthorization()
+                    KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
                         Task { @MainActor in
-                            PromisePanel.show(sessionVM: sessionVM)
+                            PromisePanel.show(sessionMgr: sessionMgr)
                         }
                     }
                 }
         }
         .windowResizability(.contentSize)
+        .modelContainer(modelContainer)
 
         Settings {
             SettingsView()
