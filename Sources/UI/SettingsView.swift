@@ -80,6 +80,24 @@ private struct CaptureTab: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+
+            Section("AI 调用熔断（单次最长等待）") {
+                HStack {
+                    Slider(
+                        value: Binding(
+                            get: { Double(settings.aiHardTimeoutSec) },
+                            set: { settings.aiHardTimeoutSec = Int($0) }
+                        ),
+                        in: 10...90, step: 5
+                    )
+                    Text("\(settings.aiHardTimeoutSec)s")
+                        .frame(width: 48, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+                Text("默认 30s。超过此时长强制取消，复用上次 level 入库。设短=容错激进、占用低；设长=容忍网络波动 / 大模型慢。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .padding(.bottom, 8)

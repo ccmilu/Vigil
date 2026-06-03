@@ -1,6 +1,6 @@
 import Foundation
 
-/// 截屏决策的可调参数。先内部硬编码；v0.2 把它放进 Settings。
+/// 截屏决策的可调参数。
 struct CaptureConfig: Sendable {
     /// 基础 tick（秒）
     var tickInterval: TimeInterval = 5.0
@@ -10,8 +10,9 @@ struct CaptureConfig: Sendable {
     var maxAIInterval: TimeInterval = 30.0
     /// 用户输入空闲多久算 idle
     var idleThreshold: TimeInterval = 60.0
-    /// AI 调用超时
-    var aiTimeout: TimeInterval = 30.0
+    /// AI 调用任务级硬超时（秒）。考虑网络波动 + 视觉模型负载，
+    /// 默认 30s；越短越早释放下一帧，越长越能容忍慢链路。
+    var aiHardTimeout: TimeInterval = 30.0
 
     static let `default` = CaptureConfig()
 }

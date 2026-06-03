@@ -19,10 +19,7 @@ enum DemoConfig {
     /// 若 LocalConfig.swift 不存在，构建会报错，提示你照着模板新建一个。
     static let apiKey = LocalConfig.apiKey
 
-    /// 单次请求超时（秒）。视觉模型 5-10s 正常，超过 15s 多半是模型卡住。
-    static let requestTimeout: TimeInterval = 15
-
-    /// FrameAnalyzer 层的硬超时：超过此值强行取消该次 AI 调用，
-    /// 释放 isAIBusy 让下一帧能继续，避免长时间静默。
-    static let frameAnalysisHardTimeout: TimeInterval = 12
+    /// URLSession 软上限。任务级硬超时由 CaptureConfig.aiHardTimeout（设置可调）控制；
+    /// 这里保持比硬超时大一点的值即可，主要兜底极端 socket 卡死。
+    static let requestTimeout: TimeInterval = 60
 }

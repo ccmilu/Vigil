@@ -116,8 +116,8 @@ actor FrameAnalyzer {
             )
         }
         do {
-            // 硬超时熔断：服务的 URLSession timeout 是软上限，这里加一层任务级超时，
-            // 超过 frameAnalysisHardTimeout 立即抛错，避免单次卡住吃掉多个 tick。
+            // 任务级硬超时（取自 config，可在 Settings 调）。
+            let hardTimeout = config.aiHardTimeout
             let result = try await withThrowingTaskGroup(of: FrameAnalysis.self) { group in
                 group.addTask { [service, currentPromise, front, jpeg] in
                     try await service.analyzeFrame(
@@ -130,7 +130,7 @@ actor FrameAnalyzer {
                     )
                 }
                 group.addTask {
-                    try await Task.sleep(nanoseconds: UInt64(DemoConfig.frameAnalysisHardTimeout * 1_000_000_000))
+                    try await Task.sleep(nanoseconds: UInt64(hardTimeout * 1_000_000_000))
                     throw AIServiceError.network(URLError(.timedOut))
                 }
                 let first = try await group.next()!

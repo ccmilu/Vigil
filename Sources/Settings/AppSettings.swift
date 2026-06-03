@@ -9,6 +9,7 @@ final class AppSettings: ObservableObject {
     @AppStorage("capture.dhashThreshold") var dhashThreshold: Int = 30
     @AppStorage("capture.maxAIIntervalSec") var maxAIIntervalSec: Int = 30
     @AppStorage("capture.idleThresholdSec") var idleThresholdSec: Int = 60
+    @AppStorage("capture.aiHardTimeoutSec") var aiHardTimeoutSec: Int = 30
     @AppStorage("debug.enabled") var debugEnabled: Bool = false
 
     /// 构造 CaptureConfig（每次起 session 时调）
@@ -17,7 +18,8 @@ final class AppSettings: ObservableObject {
             tickInterval: 5.0,
             dhashThreshold: dhashThreshold,
             maxAIInterval: TimeInterval(maxAIIntervalSec),
-            idleThreshold: TimeInterval(idleThresholdSec)
+            idleThreshold: TimeInterval(idleThresholdSec),
+            aiHardTimeout: TimeInterval(aiHardTimeoutSec)
         )
     }
 }

@@ -40,6 +40,9 @@ final class FocusSessionManager: ObservableObject {
     private var startedAt: Date?
     /// 当前活跃 session 的 capture 配置（在 start 时根据 settings 计算）
     private var activeCaptureConfig: CaptureConfig = .default
+    /// 一次只允许一个 tick 在跑；若 tick 期间又触发，标记 pending 待 AI 完成立即续跑
+    private var currentTickTask: Task<Void, Never>?
+    private var pendingTickWanted = false
 
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
 
@@ -275,19 +278,51 @@ final class FocusSessionManager: ObservableObject {
             withTimeInterval: activeCaptureConfig.tickInterval, repeats: true
         ) { [weak self] _ in
             Task { @MainActor in
-                await self?.runOneTick()
+                self?.requestTick()
             }
         }
         // 也跑一次立刻的，避免等 5s
-        Task { @MainActor in await self.runOneTick() }
+        requestTick()
     }
 
     private func stopTicking() {
         tickTimer?.invalidate()
         tickTimer = nil
+        currentTickTask?.cancel()
+        currentTickTask = nil
+        pendingTickWanted = false
     }
 
-    private func runOneTick() async {
+    /// 触发一次 tick 请求。串行执行：
+    /// - 没有 in-flight：立即起 task 跑
+    /// - 有 in-flight：标记 pending，当前 task 跑完会立即续一次
+    ///   多个 tick 在 in-flight 期间堆叠时只保留 1 个 pending（latest-only，
+    ///   避免 AI 持续慢时积压无限多个任务）
+    private func requestTick() {
+        guard analyzer != nil, session != nil else { return }
+        if currentTickTask != nil {
+            pendingTickWanted = true
+            return
+        }
+        startTickTask()
+    }
+
+    private func startTickTask() {
+        currentTickTask = Task { [weak self] in
+            guard let self else { return }
+            await self.runOneTickInner()
+            await MainActor.run {
+                self.currentTickTask = nil
+                // AI 完成后检查 pending：若期间有 tick 想跑，立即续一帧
+                if self.pendingTickWanted {
+                    self.pendingTickWanted = false
+                    self.startTickTask()
+                }
+            }
+        }
+    }
+
+    private func runOneTickInner() async {
         guard let analyzer = analyzer, let s = session else { return }
         let result = await analyzer.tick()
         await persistTick(result: result, session: s)
