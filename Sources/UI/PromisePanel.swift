@@ -48,8 +48,9 @@ private struct PromisePanelContent: View {
     let sessionMgr: FocusSessionManager
     let dismiss: () -> Void
 
-    @State private var promise: String = ""
-    @State private var durationMin: Int = 25
+    /// 用 @AppStorage 持久化最近一次输入，下次打开面板自动预填
+    @AppStorage("promise.lastInput") private var promise: String = ""
+    @AppStorage("promise.lastDurationMin") private var durationMin: Int = 25
     @State private var isStarting = false
     @State private var aiSuggestion: String? = nil   // 非 nil 说明 promise 不够具体
     @State private var aiUnreachable: String? = nil  // 非 nil 说明 AI 服务连不上

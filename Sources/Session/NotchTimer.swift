@@ -16,7 +16,7 @@ enum NotchStyle {
     /// 也就是刘海两侧的扩展区里才能露出。
     ///
     /// 例如：刘海宽 220 + extension 100 → 岛总宽 420，左右各 100pt 可见区域。
-    static let collapsedSideExtension: CGFloat = 100
+    static let collapsedSideExtension: CGFloat = 80
 
     // ===== 手动尺寸（autoDetect=false 时生效）=====
     static let manualCollapsedWidth: CGFloat = 380
@@ -172,8 +172,14 @@ struct NotchView: View {
         ZStack {
             shape
                 .fill(.black)
+                // distracted 时画底部 U 形红色描边（顶部贴菜单栏，故意不画）；
+                // 非 distracted 时画淡灰底色描边（也只画底部，保持视觉一致）
                 .overlay(
-                    shape.stroke(
+                    NotchBottomBorder(
+                        topCornerRadius: NotchStyle.topCornerRadius,
+                        bottomCornerRadius: NotchStyle.bottomCornerRadius
+                    )
+                    .stroke(
                         isDistracted ? NotchStyle.distractedBorderColor : Color.white.opacity(0.08),
                         lineWidth: isDistracted ? NotchStyle.distractedBorderWidth : 0.5
                     )

@@ -63,6 +63,52 @@ struct NotchShape: Shape {
     }
 }
 
+/// 用于描边——只画 U 形（左下 + 底部 + 右下），不画顶部水平边。
+/// 这样 distracted 红色描边不会出现在贴菜单栏的顶部。
+struct NotchBottomBorder: Shape {
+    var topCornerRadius: CGFloat = 6
+    var bottomCornerRadius: CGFloat = 14
+
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(topCornerRadius, bottomCornerRadius) }
+        set {
+            topCornerRadius = newValue.first
+            bottomCornerRadius = newValue.second
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        // 左侧 concave 圆角的"内端"作为起点（顶部水平线下方一点点）
+        path.move(to: CGPoint(x: rect.minX + topCornerRadius, y: rect.minY + topCornerRadius))
+
+        // 向下到左下凸圆角起点
+        path.addLine(to: CGPoint(x: rect.minX + topCornerRadius, y: rect.maxY - bottomCornerRadius))
+
+        // 左下 convex 圆角
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + topCornerRadius + bottomCornerRadius, y: rect.maxY),
+            control: CGPoint(x: rect.minX + topCornerRadius, y: rect.maxY)
+        )
+
+        // 底部水平
+        path.addLine(to: CGPoint(x: rect.maxX - topCornerRadius - bottomCornerRadius, y: rect.maxY))
+
+        // 右下 convex 圆角
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - topCornerRadius, y: rect.maxY - bottomCornerRadius),
+            control: CGPoint(x: rect.maxX - topCornerRadius, y: rect.maxY)
+        )
+
+        // 向上到右侧 concave 圆角的"内端"
+        path.addLine(to: CGPoint(x: rect.maxX - topCornerRadius, y: rect.minY + topCornerRadius))
+
+        // 注意：故意不闭合 path，避免在顶部画连线
+        return path
+    }
+}
+
 #Preview {
     VStack(spacing: 20) {
         NotchShape(topCornerRadius: 6, bottomCornerRadius: 14)
