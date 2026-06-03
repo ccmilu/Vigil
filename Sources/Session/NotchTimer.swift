@@ -15,16 +15,21 @@ enum NotchStyle {
     /// 物理刘海中央会盖住岛中间区域，所以内容必须放在岛的最左 / 最右端、
     /// 也就是刘海两侧的扩展区里才能露出。
     ///
-    /// 例如：刘海宽 220 + extension 100 → 岛总宽 420，左右各 100pt 可见区域。
+    /// 例如：刘海宽 220 + extension 80 → 岛总宽 380，左右各 80pt 可见区域。
     static let collapsedSideExtension: CGFloat = 80
+
+    /// autoDetect 时，展开态在物理刘海宽度基础上左右各扩展多少 pt。
+    /// 让展开态也跟随机型动态计算，而非硬编码 560pt 这种"在窄刘海机型上看着过宽"。
+    /// 例如：刘海 220 + extension 110 → 岛总宽 440。
+    static let expandedSideExtension: CGFloat = 110
 
     // ===== 手动尺寸（autoDetect=false 时生效）=====
     static let manualCollapsedWidth: CGFloat = 380
     static let manualCollapsedHeight: CGFloat = 32
+    static let manualExpandedWidth: CGFloat = 440
 
-    // ===== 展开态尺寸 =====
-    static let expandedWidth: CGFloat = 560
-    static let expandedHeight: CGFloat = 130
+    // ===== 展开态高度（无论 autoDetect 都用这个）=====
+    static let expandedHeight: CGFloat = 120
 
     // ===== 形状圆角 =====
     /// 顶部 concave 圆角（反向，圆心在外）
@@ -91,7 +96,13 @@ final class NotchTimer: ObservableObject {
     private func createWindow() {
         guard let screen = NSScreen.main else { return }
         // panel 尺寸用 expanded 上限做窗口大小；岛在内部居中缩放
-        let panelW = NotchStyle.expandedWidth + 40
+        let maxExpandedW: CGFloat
+        if NotchStyle.autoDetect {
+            maxExpandedW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
+        } else {
+            maxExpandedW = NotchStyle.manualExpandedWidth
+        }
+        let panelW = maxExpandedW + 40
         let panelH = NotchStyle.expandedHeight + 8
         let origin = NSPoint(
             x: screen.frame.midX - panelW / 2,
@@ -135,6 +146,14 @@ struct NotchView: View {
         return NotchStyle.manualCollapsedWidth
     }
 
+    /// 展开态宽度：autoDetect 时也跟随物理刘海（避免硬编码在小刘海机型上过宽）
+    private var expandedWidth: CGFloat {
+        if NotchStyle.autoDetect {
+            return ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
+        }
+        return NotchStyle.manualExpandedWidth
+    }
+
     /// 折叠态高度：autoDetect 时跟随菜单栏高度
     private var collapsedHeight: CGFloat {
         NotchStyle.autoDetect ? ScreenMetrics.menuBarHeight : NotchStyle.manualCollapsedHeight
@@ -144,7 +163,7 @@ struct NotchView: View {
         VStack(spacing: 0) {
             island
                 .frame(
-                    width: isExpanded ? NotchStyle.expandedWidth : collapsedWidth,
+                    width: isExpanded ? expandedWidth : collapsedWidth,
                     height: isExpanded ? NotchStyle.expandedHeight : collapsedHeight
                 )
                 .animation(
@@ -153,7 +172,7 @@ struct NotchView: View {
                 )
             Spacer(minLength: 0)
         }
-        .frame(width: NotchStyle.expandedWidth + 40, height: NotchStyle.expandedHeight + 8)
+        .frame(width: expandedWidth + 40, height: NotchStyle.expandedHeight + 8)
         .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
             now = Date()
         }

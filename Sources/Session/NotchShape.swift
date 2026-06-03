@@ -80,10 +80,16 @@ struct NotchBottomBorder: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
 
-        // 左侧 concave 圆角的"内端"作为起点（顶部水平线下方一点点）
-        path.move(to: CGPoint(x: rect.minX + topCornerRadius, y: rect.minY + topCornerRadius))
+        // 起点：岛最左上角（顶部水平线的左端点）
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
 
-        // 向下到左下凸圆角起点
+        // 左上 concave（反向）圆角
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + topCornerRadius, y: rect.minY + topCornerRadius),
+            control: CGPoint(x: rect.minX + topCornerRadius, y: rect.minY)
+        )
+
+        // 左侧垂直
         path.addLine(to: CGPoint(x: rect.minX + topCornerRadius, y: rect.maxY - bottomCornerRadius))
 
         // 左下 convex 圆角
@@ -101,10 +107,16 @@ struct NotchBottomBorder: Shape {
             control: CGPoint(x: rect.maxX - topCornerRadius, y: rect.maxY)
         )
 
-        // 向上到右侧 concave 圆角的"内端"
+        // 右侧垂直
         path.addLine(to: CGPoint(x: rect.maxX - topCornerRadius, y: rect.minY + topCornerRadius))
 
-        // 注意：故意不闭合 path，避免在顶部画连线
+        // 右上 concave（反向）圆角
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY),
+            control: CGPoint(x: rect.maxX - topCornerRadius, y: rect.minY)
+        )
+
+        // 故意不闭合：不画顶部水平线，避免贴菜单栏处出现描边
         return path
     }
 }
