@@ -11,7 +11,7 @@ struct SettingsView: View {
             ProvidersTab(store: store)
                 .tabItem { Label("AI", systemImage: "brain") }
         }
-        .frame(width: 560, height: 460)
+        .frame(minWidth: 640, idealWidth: 680, minHeight: 500, idealHeight: 540)
     }
 }
 
