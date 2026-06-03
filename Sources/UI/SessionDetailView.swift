@@ -35,12 +35,8 @@ struct SessionDetailView: View {
         }
         .padding(20)
         .frame(width: 760, height: 580)
-        .background(.ultraThinMaterial)
-        .background(GlassWindowAccessor())
         .sheet(item: $previewURL) { url in
             ScreenshotPreviewSheet(url: url) { previewURL = nil }
-                .background(.ultraThinMaterial)
-                .background(GlassWindowAccessor())
         }
     }
 

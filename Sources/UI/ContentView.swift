@@ -24,6 +24,24 @@ struct ContentView: View {
                 .padding(.vertical, 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .top) {
+            // 顶部 scroll edge effect：从窗口顶部开始（与红绿灯所在水平区域平行），
+            // 向下渐变淡出到透明。mask 顶部不到满 alpha，让整体保持微妙。
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .frame(height: 50)
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.8), location: 0.0),
+                            .init(color: .clear, location: 1.0)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+        }
         .onAppear {
             sessionMgr.onBreakFinished = {
                 PromisePanel.show(sessionMgr: sessionMgr)

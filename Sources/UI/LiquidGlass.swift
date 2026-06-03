@@ -109,19 +109,29 @@ struct GlassWindowAccessor: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSView {
         let v = NSView()
-        DispatchQueue.main.async {
-            guard let window = v.window else { return }
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            window.hasShadow = true
-            if transparentTitlebar {
-                window.titlebarAppearsTransparent = true
-                window.styleMask.insert(.fullSizeContentView)
-            }
-        }
+        DispatchQueue.main.async { apply(view: v) }
         return v
     }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ nsView: NSView, context: Context) {
+        // sheet 偶尔会在 view 嵌入后才设好不透明 layer，重复 apply 一次兜底
+        DispatchQueue.main.async { apply(view: nsView) }
+    }
+
+    private func apply(view v: NSView) {
+        guard let window = v.window else { return }
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = true
+        // sheet 的 contentView 可能有不透明 backing layer，强制清掉
+        if let contentView = window.contentView {
+            contentView.wantsLayer = true
+            contentView.layer?.backgroundColor = .clear
+        }
+        if transparentTitlebar {
+            window.titlebarAppearsTransparent = true
+            window.styleMask.insert(.fullSizeContentView)
+        }
+    }
 }
 
 // MARK: - macOS 14-25 回退实现
