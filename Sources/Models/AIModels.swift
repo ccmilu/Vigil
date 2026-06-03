@@ -12,12 +12,10 @@ struct TaskAnalysis: Codable, Equatable {
     let suggestion: String?
 }
 
-/// 单帧判断阶段（PRD 5.5 阶段 2）的输出
+/// 单帧判断阶段（PRD 5.5 阶段 2）的输出。
+/// 复用 PersistenceModels 里定义的 FocusLevel。
 struct FrameAnalysis: Codable, Equatable {
-    enum Level: String, Codable {
-        case fully, wandering, distracted
-    }
-    let level: Level
+    let level: FocusLevel
     let reasoning: String
     let reminder: String
 }
