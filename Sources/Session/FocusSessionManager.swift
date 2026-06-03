@@ -1,0 +1,288 @@
+import Foundation
+import SwiftData
+import SwiftUI
+import Combine
+import OSLog
+
+/// 把 promise → 截屏 → AI → 通知 串成完整 Session。
+/// 状态机：
+///   idle → preparing (analyzeTask) → running → analyzing (summarize) → completed
+///
+/// 责任：
+/// - 起 session、记 plannedDuration、timer 倒计时
+/// - 驱动 FrameAnalyzer 每 5s 跑一次
+/// - 拿到 AnalysisRecord 落 SwiftData + 触发 distract 通知
+/// - 结束时算时间分布、调 summarize、写回 FocusSession
+@MainActor
+final class FocusSessionManager: ObservableObject {
+    enum Phase: Equatable {
+        case idle
+        case preparing(promise: String)
+        case running(promise: String, remaining: TimeInterval)
+        case analyzing
+        case completed(sessionID: UUID)
+        case failed(String)
+    }
+
+    @Published private(set) var phase: Phase = .idle
+    @Published private(set) var lastAnalysis: AnalysisRecord?
+
+    private let modelContainer: ModelContainer
+    private let service: AIService
+    private var analyzer: FrameAnalyzer?
+    private var session: FocusSession?
+
+    private var timer: Timer?
+    private var tickTimer: Timer?
+    private var startedAt: Date?
+
+    private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
+    private let captureConfig: CaptureConfig
+
+    init(
+        modelContainer: ModelContainer,
+        service: AIService = OpenAICompatibleService(),
+        captureConfig: CaptureConfig = .default
+    ) {
+        self.modelContainer = modelContainer
+        self.service = service
+        self.captureConfig = captureConfig
+    }
+
+    // MARK: - 起 session
+
+    /// 起一次会话；成功返回 sessionID。
+    @discardableResult
+    func start(promise: String, durationSeconds: Int) async -> Result<UUID, Error> {
+        phase = .preparing(promise: promise)
+
+        // 阶段 1：任务理解（失败也不阻塞，只记 warning）
+        do {
+            _ = try await service.analyzeTask(promise)
+        } catch {
+            logger.warning("analyzeTask 失败，跳过：\(error.localizedDescription)")
+        }
+
+        // 建 SwiftData session
+        let ctx = modelContainer.mainContext
+        let s = FocusSession(promise: promise, plannedDuration: durationSeconds)
+        ctx.insert(s)
+        do {
+            try ctx.save()
+        } catch {
+            phase = .failed("无法保存 session：\(error.localizedDescription)")
+            return .failure(error)
+        }
+        self.session = s
+        self.startedAt = .now
+        phase = .running(promise: promise, remaining: TimeInterval(durationSeconds))
+
+        // 起 FrameAnalyzer
+        let logURL = ScreenshotStore.rootDirectory
+            .appendingPathComponent("\(s.id.uuidString)/diagnostic.jsonl")
+        self.analyzer = FrameAnalyzer(
+            service: service,
+            config: captureConfig,
+            sessionID: s.id,
+            promise: promise,
+            diagnosticLogURL: logURL
+        )
+
+        startCountdown(durationSeconds: durationSeconds)
+        startTicking()
+        DockBadge.setRemaining(seconds: durationSeconds)
+
+        return .success(s.id)
+    }
+
+    // MARK: - 停止 session
+
+    func stopManually(reason: String? = nil) async {
+        await endSession(status: .manualCompleted, stopReason: reason)
+    }
+
+    private func autoComplete() async {
+        await endSession(status: .autoCompleted, stopReason: nil)
+    }
+
+    private func endSession(status: SessionStatus, stopReason: String?) async {
+        guard let s = session else { return }
+        stopCountdown()
+        stopTicking()
+        DockBadge.setRemaining(seconds: nil)
+        phase = .analyzing
+
+        let actual = startedAt.map { Int(Date().timeIntervalSince($0)) } ?? 0
+        s.actualDuration = actual
+        s.endedAt = .now
+        s.status = status
+        s.stopReason = stopReason
+
+        // 算时间分布（每条 AnalysisRecord 视作 captureInterval 秒，简单近似）
+        let ctx = modelContainer.mainContext
+        let sid = s.id
+        let descriptor = FetchDescriptor<AnalysisRecord>(
+            predicate: #Predicate { $0.session?.id == sid }
+        )
+        let records = (try? ctx.fetch(descriptor)) ?? []
+        let perRecord = captureConfig.tickInterval
+        var fully = 0.0, wandering = 0.0, distracted = 0.0, idle = 0.0
+        for r in records {
+            switch r.level {
+            case .fully: fully += perRecord
+            case .wandering: wandering += perRecord
+            case .distracted: distracted += perRecord
+            case .idle: idle += perRecord
+            }
+        }
+        let total = max(Double(actual), 1)
+        s.fullyRatio = fully / total
+        s.wanderingRatio = wandering / total
+        s.distractedRatio = distracted / total
+        s.idleRatio = idle / total
+
+        // 调 summarize
+        let distractedNotes = records.filter { $0.level == .distracted }.map(\.reasoning)
+        do {
+            let text = try await service.summarize(
+                SummaryInput(
+                    promise: s.promise,
+                    sessionSeconds: actual,
+                    fullySec: Int(fully),
+                    wanderingSec: Int(wandering),
+                    distractedSec: Int(distracted),
+                    idleSec: Int(idle),
+                    distractedNotes: distractedNotes
+                )
+            )
+            s.summary = text
+        } catch {
+            logger.warning("summarize 失败：\(error.localizedDescription)")
+            s.summary = "(AI 复盘失败：\(error.localizedDescription))"
+        }
+        try? ctx.save()
+        phase = .completed(sessionID: s.id)
+        self.session = nil
+        self.analyzer = nil
+        self.startedAt = nil
+    }
+
+    // MARK: - 倒计时
+
+    private func startCountdown(durationSeconds: Int) {
+        let end = Date().addingTimeInterval(TimeInterval(durationSeconds))
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                guard case .running(let p, _) = self.phase else { return }
+                let remaining = end.timeIntervalSinceNow
+                if remaining <= 0 {
+                    await self.autoComplete()
+                } else {
+                    self.phase = .running(promise: p, remaining: remaining)
+                    DockBadge.setRemaining(seconds: Int(remaining))
+                }
+            }
+        }
+    }
+
+    private func stopCountdown() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    // MARK: - tick FrameAnalyzer
+
+    private func startTicking() {
+        tickTimer?.invalidate()
+        tickTimer = Timer.scheduledTimer(
+            withTimeInterval: captureConfig.tickInterval, repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.runOneTick()
+            }
+        }
+        // 也跑一次立刻的，避免等 5s
+        Task { @MainActor in await self.runOneTick() }
+    }
+
+    private func stopTicking() {
+        tickTimer?.invalidate()
+        tickTimer = nil
+    }
+
+    private func runOneTick() async {
+        guard let analyzer = analyzer, let s = session else { return }
+        let result = await analyzer.tick()
+        await persistTick(result: result, session: s)
+    }
+
+    private func persistTick(result: FrameTickResult, session: FocusSession) async {
+        // 写盘 + 落 AnalysisRecord
+        let ctx = modelContainer.mainContext
+        var screenshotPath: String? = nil
+        if let image = result.image {
+            // 仅在 analyzed 分支落盘；skip 不存
+            if case .analyzed = result.decision {
+                let (url, relative) = ScreenshotStore.newScreenshotURL(sessionID: session.id, at: result.at)
+                try? ScreenCaptureManager().encodeAndWrite(image, to: url)
+                screenshotPath = relative
+            }
+        }
+
+        let record: AnalysisRecord
+        switch result.decision {
+        case .skippedIdle:
+            record = AnalysisRecord(
+                session: session,
+                frontAppName: result.front?.appName ?? "",
+                frontWindowTitles: result.front?.windowTitles ?? "",
+                level: .idle, reasoning: "", reminder: "",
+                fromAI: false, hasChanged: false,
+                dhashHex: result.hash?.hexString,
+                createdAt: result.at
+            )
+        case .skippedNoWindows, .skippedAIBusy:
+            return  // 这两种情况不入库，避免噪声
+        case .skippedDhashStable(let dist):
+            // 复用上次 level，不调 AI，但记一条 fromAI=false 的复用记录
+            record = AnalysisRecord(
+                session: session,
+                screenshotLocalPath: screenshotPath,
+                frontAppName: result.front?.appName ?? "",
+                frontWindowTitles: result.front?.windowTitles ?? "",
+                level: .wandering,  // 这里没有 lastLevel；后续可让 analyzer 暴露
+                reasoning: "(画面无显著变化，复用上次判断)",
+                reminder: "",
+                fromAI: false, hasChanged: false,
+                dhashHex: result.hash?.hexString,
+                dhashDistance: dist,
+                createdAt: result.at
+            )
+        case .analyzed(_, let dist, let level, let fromAI):
+            record = AnalysisRecord(
+                session: session,
+                screenshotLocalPath: screenshotPath,
+                frontAppName: result.front?.appName ?? "",
+                frontWindowTitles: result.front?.windowTitles ?? "",
+                level: level,
+                reasoning: result.ai?.reasoning ?? "",
+                reminder: result.ai?.reminder ?? "",
+                fromAI: fromAI,
+                hasChanged: result.hasChanged,
+                dhashHex: result.hash?.hexString,
+                dhashDistance: dist,
+                createdAt: result.at,
+                analysisLatencyMs: result.latencyMs
+            )
+            // 状态变化打通知
+            if result.hasChanged, level == .distracted {
+                await Notifier.notifyDistraction(reminder: result.ai?.reminder ?? "")
+            }
+        }
+        ctx.insert(record)
+        try? ctx.save()
+        self.lastAnalysis = record
+    }
+}
