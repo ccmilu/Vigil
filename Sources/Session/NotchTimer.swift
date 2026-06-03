@@ -11,12 +11,19 @@ enum NotchStyle {
     /// 自动检测物理刘海宽度 + 菜单栏高度（推荐）
     static let autoDetect: Bool = true
 
+    /// autoDetect 时，折叠态在物理刘海宽度基础上左右各扩展多少 pt（让内容可见）。
+    /// 物理刘海中央会盖住岛中间区域，所以内容必须放在岛的最左 / 最右端、
+    /// 也就是刘海两侧的扩展区里才能露出。
+    ///
+    /// 例如：刘海宽 220 + extension 100 → 岛总宽 420，左右各 100pt 可见区域。
+    static let collapsedSideExtension: CGFloat = 100
+
     // ===== 手动尺寸（autoDetect=false 时生效）=====
-    static let manualCollapsedWidth: CGFloat = 220
+    static let manualCollapsedWidth: CGFloat = 380
     static let manualCollapsedHeight: CGFloat = 32
 
     // ===== 展开态尺寸 =====
-    static let expandedWidth: CGFloat = 520
+    static let expandedWidth: CGFloat = 560
     static let expandedHeight: CGFloat = 130
 
     // ===== 形状圆角 =====
@@ -120,9 +127,12 @@ struct NotchView: View {
     @State private var hovering = false
     @State private var now = Date()
 
-    /// 折叠态宽度：autoDetect 时跟随物理刘海
+    /// 折叠态宽度：autoDetect 时 = 物理刘海宽 + 左右扩展（让内容能露出在刘海两侧）
     private var collapsedWidth: CGFloat {
-        NotchStyle.autoDetect ? ScreenMetrics.notchWidth : NotchStyle.manualCollapsedWidth
+        if NotchStyle.autoDetect {
+            return ScreenMetrics.notchWidth + 2 * NotchStyle.collapsedSideExtension
+        }
+        return NotchStyle.manualCollapsedWidth
     }
 
     /// 折叠态高度：autoDetect 时跟随菜单栏高度
@@ -208,20 +218,22 @@ struct NotchView: View {
             case .center:
                 collapsedItem
             case .split:
-                HStack {
+                HStack(spacing: 0) {
+                    // 左端：level 圆点（在物理刘海左侧的扩展区）
                     Circle()
                         .fill(levelColor)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 8, height: 8)
                     Spacer()
+                    // 右端：倒计时（在物理刘海右侧的扩展区）
                     Text(formatTime(state.remaining))
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
                         .foregroundStyle(.white)
                         .monospacedDigit()
                 }
             }
         }
-        // 在反向圆角的"咬"形里，内容要离边缘有距离才不会被切到
-        .padding(.horizontal, NotchStyle.topCornerRadius + NotchStyle.bottomCornerRadius + 6)
+        // 贴近岛左右端（避开刘海中央），仅留少量边距让圆角不切到内容
+        .padding(.horizontal, max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 4)
         .padding(.bottom, 2)
     }
 
