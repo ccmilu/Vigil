@@ -69,3 +69,25 @@ final class SoundPlayer {
         }
     }
 }
+
+/// hover 试听专用：保证可以连续中断 + 反向重播。
+/// NSSound(named:) 内部缓存了同一个实例，连续调 play 会被忽略——必须先 stop 再 play。
+@MainActor
+enum HoverSoundPreview {
+    private static var current: NSSound?
+
+    static func play(_ name: String) {
+        // 停掉前一个
+        current?.stop()
+        // 用 copy 拿一个独立 sound 实例，避免 NSSound(named:) 单例打架
+        let sound = (NSSound(named: name)?.copy() as? NSSound) ?? NSSound(named: name)
+        sound?.volume = SoundPlayer.shared.volume
+        sound?.play()
+        current = sound
+    }
+
+    static func stop() {
+        current?.stop()
+        current = nil
+    }
+}

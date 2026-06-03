@@ -196,7 +196,7 @@ private struct SoundChip: View {
         .onHover { hovering in
             isHovering = hovering
             if hovering {
-                NSSound(named: name)?.play()
+                HoverSoundPreview.play(name)
             }
         }
     }
@@ -210,6 +210,8 @@ private struct SoundChip: View {
 
 private struct DebugTab: View {
     @ObservedObject var settings: AppSettings
+    @AppStorage("onboarding.completed") private var onboardingDone = false
+    @State private var showRestartAlert = false
 
     var body: some View {
         Form {
@@ -230,8 +232,25 @@ private struct DebugTab: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+
+            Section("重置") {
+                Button {
+                    onboardingDone = false
+                    showRestartAlert = true
+                } label: {
+                    Label("重新查看引导流程", systemImage: "arrow.counterclockwise")
+                }
+                Text("点击后关闭 Focus 主窗口再重新打开（Cmd+W → Dock 点击图标），引导流程会再次出现。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
+        .alert("已重置引导", isPresented: $showRestartAlert) {
+            Button("好") {}
+        } message: {
+            Text("关闭主窗口（Cmd+W）→ 从 Dock 重新点击 Focus 图标，引导会再次出现。")
+        }
     }
 }
 

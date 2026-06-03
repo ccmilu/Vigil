@@ -1,10 +1,66 @@
 import AppKit
 import SwiftUI
 
-/// Dynamic Island 风格的刘海岛。
-/// - 折叠态：紧贴菜单栏顶部，宽度匹配刘海，仅 level 圆点 + Focus 标签
-/// - 展开态（hover / distracted 触发）：变宽变高，显示倒计时 + reminder
-/// - 平滑形变动画（spring）
+// MARK: - ✏️ 你可以微调的参数都在这里
+
+/// 调这些常量，然后用 Xcode 打开本文件，光标点进 `#Preview { ... }`，
+/// 右上角 Editor → Canvas（或 ⌥⌘↩）打开预览。
+/// 实时拖动 hovering / distracted 模拟两种状态。
+enum NotchStyle {
+    // MARK: 尺寸（高度尽量贴菜单栏）
+    /// 折叠态宽度
+    static let collapsedWidth: CGFloat = 360
+    /// 折叠态高度 — 默认匹配 macOS 菜单栏高度
+    static let collapsedHeight: CGFloat = 26
+
+    /// 展开态宽度
+    static let expandedWidth: CGFloat = 520
+    /// 展开态高度（向菜单栏下方延伸）
+    static let expandedHeight: CGFloat = 110
+
+    // MARK: 形状圆角
+    /// 顶部圆角（顶边贴菜单栏，给一点点圆滑）
+    static let topCornerRadius: CGFloat = 6
+    /// 底部圆角（不要太圆）
+    static let bottomCornerRadius: CGFloat = 12
+
+    // MARK: 位置
+    /// 整个 NSPanel 的水平位置：在屏幕水平居中。
+    /// 物理刘海大约从屏幕中央左右各 110pt（约 220pt 宽），
+    /// 所以岛的宽度建议 > 220 让左右两端伸出刘海，内容才看得见。
+    static let horizontalCenter = true
+
+    /// 顶部 Y 偏移（pt）：0 = 紧贴屏幕最顶部（盖菜单栏中央）；
+    /// 正值 = 向下挪一点。
+    static let topOffset: CGFloat = 0
+
+    // MARK: 内容布局（避开物理刘海中央摄像头区域）
+    /// 折叠态内容贴向岛的哪一侧：
+    /// - .leading 显示在岛左端（露出刘海左边）
+    /// - .trailing 显示在岛右端（露出刘海右边）
+    /// - .center 显示在岛中央（会被刘海遮住一部分）
+    /// - .split 倒计时在左端 + level 圆点在右端
+    static let collapsedContentAlignment: ContentAlignment = .split
+
+    // MARK: distracted 红色描边
+    static let distractedBorderWidth: CGFloat = 2.0
+    static let distractedBorderColor: Color = .red
+
+    // MARK: 动画
+    /// 形变 spring 参数
+    static let springResponse: Double = 0.42
+    static let springDamping: Double = 0.78
+
+    /// distracted 跳变时强制展开的秒数
+    static let distractedFlashSeconds: TimeInterval = 6
+
+    enum ContentAlignment {
+        case leading, trailing, center, split
+    }
+}
+
+// MARK: - 状态
+
 @MainActor
 final class NotchTimer: ObservableObject {
     static let shared = NotchTimer()
@@ -13,7 +69,6 @@ final class NotchTimer: ObservableObject {
     @Published var level: FocusLevel? = nil
     @Published var promise: String = ""
     @Published var reminder: String = ""
-    /// distracted 跳变时强制展开到这个时刻
     @Published var forceExpandUntil: Date? = nil
 
     private var window: NSPanel?
@@ -37,19 +92,18 @@ final class NotchTimer: ObservableObject {
         self.level = level
     }
 
-    /// 检测到 distracted 跳变时召唤强制展开 6 秒
     func flashDistracted(reminder: String) {
         self.reminder = reminder
-        self.forceExpandUntil = Date().addingTimeInterval(6)
+        self.forceExpandUntil = Date().addingTimeInterval(NotchStyle.distractedFlashSeconds)
     }
 
     private func createWindow() {
         guard let screen = NSScreen.main else { return }
-        let size = NSSize(width: NotchView.maxWidth + 40, height: NotchView.maxHeight + 4)
-        // 屏幕顶部居中；最高点贴齐屏幕顶部（盖住菜单栏中间区域）
+        // 用 expanded 尺寸作为 panel 大小（折叠态居中放在里面）
+        let size = NSSize(width: NotchStyle.expandedWidth + 40, height: NotchStyle.expandedHeight + 8)
         let origin = NSPoint(
             x: screen.frame.midX - size.width / 2,
-            y: screen.frame.maxY - size.height
+            y: screen.frame.maxY - size.height - NotchStyle.topOffset
         )
         let panel = FloatingNotchPanel(
             contentRect: NSRect(origin: origin, size: size),
@@ -81,20 +135,20 @@ struct NotchView: View {
     @State private var hovering = false
     @State private var now = Date()
 
-    // 折叠态尺寸（匹配 14" 刘海宽度）
-    static let collapsedWidth: CGFloat = 200
-    static let collapsedHeight: CGFloat = 30
-    // 展开态尺寸
-    static let maxWidth: CGFloat = 480
-    static let maxHeight: CGFloat = 140
-
     var body: some View {
         VStack(spacing: 0) {
             island
+                .frame(
+                    width: isExpanded ? NotchStyle.expandedWidth : NotchStyle.collapsedWidth,
+                    height: isExpanded ? NotchStyle.expandedHeight : NotchStyle.collapsedHeight
+                )
+                .animation(
+                    .spring(response: NotchStyle.springResponse, dampingFraction: NotchStyle.springDamping),
+                    value: isExpanded
+                )
             Spacer(minLength: 0)
         }
-        .frame(width: Self.maxWidth + 40, height: Self.maxHeight + 4)
-        // 用一个低频 timer 检查 forceExpandUntil 是否还在生效
+        .frame(width: NotchStyle.expandedWidth + 40, height: NotchStyle.expandedHeight + 8)
         .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
             now = Date()
         }
@@ -106,43 +160,23 @@ struct NotchView: View {
         return false
     }
 
+    private var isDistracted: Bool { state.level == .distracted }
+
+    /// 岛本体 — 黑色背景 + 描边都画在同一形状里，保证缩放完全同步
     private var island: some View {
         ZStack {
-            // 黑色岛形状
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: 22,
-                bottomTrailingRadius: 22,
-                topTrailingRadius: 0
-            )
-            .fill(.black)
-            .overlay(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 0,
-                    bottomLeadingRadius: 22,
-                    bottomTrailingRadius: 22,
-                    topTrailingRadius: 0
+            shape
+                .fill(.black)
+                .overlay(
+                    // 描边在 fill 之上叠加，share 同一份 frame
+                    shape.stroke(
+                        isDistracted ? NotchStyle.distractedBorderColor : Color.white.opacity(0.08),
+                        lineWidth: isDistracted ? NotchStyle.distractedBorderWidth : 0.5
+                    )
                 )
-                .stroke(borderColor, lineWidth: 1.5)
-            )
-
-            // 内容层
-            Group {
-                if isExpanded {
-                    expandedContent
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                } else {
-                    collapsedContent
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                }
-            }
-            .animation(.easeInOut(duration: 0.18), value: isExpanded)
+            content
         }
-        .frame(
-            width: isExpanded ? Self.maxWidth : Self.collapsedWidth,
-            height: isExpanded ? Self.maxHeight : Self.collapsedHeight
-        )
-        .animation(.spring(response: 0.42, dampingFraction: 0.72), value: isExpanded)
+        .clipShape(shape)
         .onHover { hovering = $0 }
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
@@ -150,12 +184,63 @@ struct NotchView: View {
                 w.makeKeyAndOrderFront(nil)
             }
         }
-        // distracted 时给一圈红色脉动描边
-        .overlay(distractedPulse)
     }
 
+    private var shape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: NotchStyle.topCornerRadius,
+            bottomLeadingRadius: NotchStyle.bottomCornerRadius,
+            bottomTrailingRadius: NotchStyle.bottomCornerRadius,
+            topTrailingRadius: NotchStyle.topCornerRadius
+        )
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if isExpanded {
+            expandedContent.transition(.opacity)
+        } else {
+            collapsedContent.transition(.opacity)
+        }
+    }
+
+    // MARK: 折叠态内容
+
     private var collapsedContent: some View {
-        HStack(spacing: 8) {
+        Group {
+            switch NotchStyle.collapsedContentAlignment {
+            case .leading:
+                HStack {
+                    collapsedItem
+                    Spacer()
+                }
+            case .trailing:
+                HStack {
+                    Spacer()
+                    collapsedItem
+                }
+            case .center:
+                collapsedItem
+            case .split:
+                HStack {
+                    // 左端：level 圆点
+                    Circle()
+                        .fill(levelColor)
+                        .frame(width: 8, height: 8)
+                    Spacer()
+                    // 右端：倒计时
+                    Text(formatTime(state.remaining))
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white)
+                        .monospacedDigit()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var collapsedItem: some View {
+        HStack(spacing: 6) {
             Circle()
                 .fill(levelColor)
                 .frame(width: 8, height: 8)
@@ -164,17 +249,18 @@ struct NotchView: View {
                 .foregroundStyle(.white)
                 .monospacedDigit()
         }
-        .padding(.horizontal, 12)
     }
 
+    // MARK: 展开态内容
+
     private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 10) {
                 Circle()
                     .fill(levelColor)
                     .frame(width: 12, height: 12)
                 Text(formatTime(state.remaining))
-                    .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 28, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.white)
                     .monospacedDigit()
                 Spacer()
@@ -182,7 +268,7 @@ struct NotchView: View {
                     .font(.caption.weight(.medium))
                     .foregroundStyle(levelColor)
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(levelColor.opacity(0.15), in: .capsule)
+                    .background(levelColor.opacity(0.18), in: .capsule)
             }
             if !state.promise.isEmpty {
                 Text(state.promise)
@@ -192,39 +278,14 @@ struct NotchView: View {
             }
             if isDistracted, !state.reminder.isEmpty {
                 Text(state.reminder)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(.white)
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.95))
                     .lineLimit(2)
                     .padding(.top, 2)
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 16)
-    }
-
-    private var distractedPulse: some View {
-        Group {
-            if isDistracted {
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 0,
-                    bottomLeadingRadius: 22,
-                    bottomTrailingRadius: 22,
-                    topTrailingRadius: 0
-                )
-                .stroke(Color.red.opacity(0.6), lineWidth: 2)
-                .blur(radius: 0.5)
-            }
-        }
-    }
-
-    private var isDistracted: Bool { state.level == .distracted }
-
-    private var borderColor: Color {
-        switch state.level {
-        case .distracted: return Color.red.opacity(0.4)
-        case .fully: return Color.white.opacity(0.08)
-        default: return Color.white.opacity(0.06)
-        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
 
     private var levelColor: Color {
@@ -251,4 +312,27 @@ struct NotchView: View {
         let total = Int(max(seconds, 0))
         return String(format: "%02d:%02d", total / 60, total % 60)
     }
+}
+
+// MARK: - Preview（Xcode Canvas 实时预览）
+
+#Preview("折叠态 · fully") {
+    let state = NotchTimer.shared
+    state.remaining = 1234
+    state.level = .fully
+    state.promise = "完成 Focus 项目刘海调优"
+    return NotchView(state: state)
+        .frame(width: 600, height: 200)
+        .background(Color.blue.opacity(0.2))
+}
+
+#Preview("折叠态 · distracted") {
+    let state = NotchTimer.shared
+    state.remaining = 1234
+    state.level = .distracted
+    state.promise = "完成 Focus 项目"
+    state.reminder = "刚才在刷 YouTube；回到工作吧"
+    return NotchView(state: state)
+        .frame(width: 600, height: 200)
+        .background(Color.blue.opacity(0.2))
 }
