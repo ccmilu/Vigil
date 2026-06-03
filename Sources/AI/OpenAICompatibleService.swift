@@ -5,7 +5,7 @@ import Foundation
 ///
 /// 关键点：
 /// - URLSession 可注入，便于单元测试 mock；
-/// - 对 LM Studio / Ollama 做兼容（去除 `detail` 字段、容忍非严格 JSON）；
+/// - 视觉请求支持本地 host 自动剥离 `detail` 字段（Ollama / LM Studio 兼容）；
 /// - JSON 解析失败时尝试 regex 兜底提取 `{...}`，避免提示词包裹 markdown 时崩盘。
 struct OpenAICompatibleService: AIService {
     let baseURL: URL
@@ -31,33 +31,107 @@ struct OpenAICompatibleService: AIService {
     // MARK: - AIService
 
     func analyzeTask(_ promise: String) async throws -> TaskAnalysis {
-        let raw = try await chat(
+        let raw = try await chatText(
             system: PromptTemplates.analyzeTaskSystem,
             user: PromptTemplates.analyzeTaskUser(promise: promise),
             temperature: 0.3
         )
-        return try Self.decodeTaskAnalysis(raw)
+        return try Self.decode(TaskAnalysis.self, from: raw)
     }
 
-    // MARK: - Internal
+    func analyzeFrame(_ input: FrameAnalysisInput) async throws -> FrameAnalysis {
+        let user = PromptTemplates.analyzeFrameUser(
+            promise: input.promise,
+            appName: input.appName,
+            windowTitles: input.windowTitles
+        )
+        let raw: String
+        if let jpeg = input.screenshotJPEG {
+            raw = try await chatVision(
+                system: PromptTemplates.analyzeFrameSystem,
+                user: user,
+                imageJPEG: jpeg,
+                temperature: 0.3
+            )
+        } else {
+            raw = try await chatText(
+                system: PromptTemplates.analyzeFrameSystem,
+                user: user,
+                temperature: 0.3
+            )
+        }
+        return try Self.decode(FrameAnalysis.self, from: raw)
+    }
 
-    /// 发起一次 chat completion，返回 message.content 字符串。
-    func chat(system: String, user: String, temperature: Double) async throws -> String {
+    func summarize(_ input: SummaryInput) async throws -> String {
+        try await chatText(
+            system: PromptTemplates.summarizeSystem,
+            user: PromptTemplates.summarizeUser(
+                promise: input.promise,
+                sessionSeconds: input.sessionSeconds,
+                fullySec: input.fullySec,
+                wanderingSec: input.wanderingSec,
+                distractedSec: input.distractedSec,
+                idleSec: input.idleSec,
+                distractedNotes: input.distractedNotes
+            ),
+            temperature: 0.7
+        )
+    }
+
+    // MARK: - Internal: 纯文本 chat
+
+    func chatText(system: String, user: String, temperature: Double) async throws -> String {
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [
+                ["role": "system", "content": system],
+                ["role": "user", "content": user]
+            ],
+            "temperature": temperature
+        ]
+        return try await sendChat(body: body)
+    }
+
+    // MARK: - Internal: 视觉 chat（含图片）
+
+    func chatVision(
+        system: String,
+        user: String,
+        imageJPEG: Data,
+        temperature: Double
+    ) async throws -> String {
+        let base64 = imageJPEG.base64EncodedString()
+        let dataURL = "data:image/jpeg;base64,\(base64)"
+
+        var imageDict: [String: Any] = ["url": dataURL]
+        if !isLocalHost {
+            imageDict["detail"] = "low"  // 本地服务（LM Studio/Ollama）不识别此字段
+        }
+
+        let body: [String: Any] = [
+            "model": model,
+            "messages": [
+                ["role": "system", "content": system],
+                ["role": "user", "content": [
+                    ["type": "text", "text": user],
+                    ["type": "image_url", "image_url": imageDict]
+                ]]
+            ],
+            "temperature": temperature
+        ]
+        return try await sendChat(body: body)
+    }
+
+    // MARK: - Internal: HTTP & 解析
+
+    private func sendChat(body: [String: Any]) async throws -> String {
         let endpoint = baseURL.appendingPathComponent("chat/completions")
         var request = URLRequest(url: endpoint, timeoutInterval: timeout)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-
-        let payload = ChatRequest(
-            model: model,
-            messages: [
-                .init(role: "system", content: system),
-                .init(role: "user", content: user)
-            ],
-            temperature: temperature
-        )
-        request.httpBody = try JSONEncoder().encode(payload)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let data: Data
         let response: URLResponse
@@ -66,15 +140,13 @@ struct OpenAICompatibleService: AIService {
         } catch {
             throw AIServiceError.network(error)
         }
-
         guard let http = response as? HTTPURLResponse else {
             throw AIServiceError.invalidResponse(status: -1, body: "non-http response")
         }
         guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw AIServiceError.invalidResponse(status: http.statusCode, body: body)
+            let bodyStr = String(data: data, encoding: .utf8) ?? ""
+            throw AIServiceError.invalidResponse(status: http.statusCode, body: bodyStr)
         }
-
         let decoded: ChatResponse
         do {
             decoded = try JSONDecoder().decode(ChatResponse.self, from: data)
@@ -90,8 +162,18 @@ struct OpenAICompatibleService: AIService {
         return content
     }
 
-    /// 把 AI 返回的字符串解析成 TaskAnalysis。容忍模型把 JSON 包在 markdown 里。
-    static func decodeTaskAnalysis(_ raw: String) throws -> TaskAnalysis {
+    private var isLocalHost: Bool {
+        guard let host = baseURL.host?.lowercased() else { return false }
+        if host == "localhost" || host == "127.0.0.1" { return true }
+        if host.hasPrefix("192.168.") { return true }
+        if host.hasPrefix("10.") { return true }
+        if host.hasSuffix(".local") { return true }
+        return false
+    }
+
+    // MARK: - Static helpers (test 可访问)
+
+    static func decode<T: Decodable>(_ type: T.Type, from raw: String) throws -> T {
         let json = extractFirstJSONObject(from: raw) ?? raw
         guard let data = json.data(using: .utf8) else {
             throw AIServiceError.decodingFailed(
@@ -100,13 +182,17 @@ struct OpenAICompatibleService: AIService {
             )
         }
         do {
-            return try JSONDecoder().decode(TaskAnalysis.self, from: data)
+            return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw AIServiceError.decodingFailed(underlying: error, raw: raw)
         }
     }
 
-    /// 从可能含 markdown 标记的字符串中抽出第一个 {...} JSON 块。
+    /// 兼容旧测试入口
+    static func decodeTaskAnalysis(_ raw: String) throws -> TaskAnalysis {
+        try decode(TaskAnalysis.self, from: raw)
+    }
+
     static func extractFirstJSONObject(from text: String) -> String? {
         var depth = 0
         var start: String.Index?
@@ -128,23 +214,8 @@ struct OpenAICompatibleService: AIService {
 
 // MARK: - Wire types
 
-private struct ChatRequest: Codable {
-    let model: String
-    let messages: [Message]
-    let temperature: Double
-
-    struct Message: Codable {
-        let role: String
-        let content: String
-    }
-}
-
 private struct ChatResponse: Codable {
     let choices: [Choice]
-    struct Choice: Codable {
-        let message: Message
-    }
-    struct Message: Codable {
-        let content: String
-    }
+    struct Choice: Codable { let message: Message }
+    struct Message: Codable { let content: String }
 }
