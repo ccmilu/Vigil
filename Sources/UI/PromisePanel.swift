@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// 按 ⇧⌘⌥Space 或主窗口按钮触发的"起 session"面板。
 enum PromisePanel {
     @MainActor
     static func show(sessionMgr: FocusSessionManager) {
@@ -22,7 +21,7 @@ final class PromisePanelWindow: NSPanel {
 
     init(sessionMgr: FocusSessionManager) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 280),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 320),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -52,36 +51,48 @@ private struct PromisePanelContent: View {
     @State private var promise: String = ""
     @State private var durationMin: Int = 25
     @State private var isStarting = false
+    @State private var aiSuggestion: String? = nil  // 非 nil 说明 promise 不够具体
+    @State private var hasAskedAI = false
     @FocusState private var focused: Bool
 
     private let presetMinutes = [10, 15, 25, 45, 60]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("This time I promise to...")
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            TextField("写一份周报", text: $promise, axis: .vertical)
+            TextField("例：完成季度报告初稿", text: $promise, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.title3)
                 .lineLimit(2...4)
                 .focused($focused)
+
+            if let suggestion = aiSuggestion {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundStyle(.orange)
+                    Text(suggestion)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                }
+                .padding(10)
+                .background(Color.orange.opacity(0.1), in: .rect(cornerRadius: 6))
+            }
 
             HStack(spacing: 8) {
                 Text("时长")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 ForEach(presetMinutes, id: \.self) { m in
-                    Button("\(m)") {
-                        durationMin = m
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .background(
-                        durationMin == m ? Color.accentColor.opacity(0.15) : .clear,
-                        in: .rect(cornerRadius: 6)
-                    )
+                    Button("\(m)") { durationMin = m }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .background(
+                            durationMin == m ? Color.accentColor.opacity(0.15) : .clear,
+                            in: .rect(cornerRadius: 6)
+                        )
                 }
                 Text("分钟")
                     .font(.caption)
@@ -92,18 +103,53 @@ private struct PromisePanelContent: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Start \(durationMin) min") { Task { await submit() } }
-                    .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty || isStarting)
+
+                if aiSuggestion == nil {
+                    Button("Start \(durationMin) min") { Task { await onStartTapped() } }
+                        .keyboardShortcut(.defaultAction)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(promise.trimmingCharacters(in: .whitespaces).isEmpty || isStarting)
+                } else {
+                    Button("仍然开始") { Task { await actuallyStart() } }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isStarting)
+                }
             }
         }
         .padding(24)
-        .frame(width: 520)
-        .onAppear { focused = true }
+        .frame(width: 540)
+        .onAppear {
+            // NSHostingController 嵌入 NSPanel 时 @FocusState 设置过早会失效，延迟 50ms
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                focused = true
+            }
+        }
+        .onChange(of: promise) { _, _ in
+            // 用户改了 promise 后清除上次的反问
+            aiSuggestion = nil
+            hasAskedAI = false
+        }
     }
 
-    private func submit() async {
+    /// 第一次点 Start：先调 validatePromise 校验
+    private func onStartTapped() async {
+        let trimmed = promise.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        isStarting = true
+        defer { isStarting = false }
+
+        if !hasAskedAI {
+            hasAskedAI = true
+            if let suggestion = await sessionMgr.validatePromise(trimmed), !suggestion.isEmpty {
+                aiSuggestion = suggestion
+                return
+            }
+        }
+        await actuallyStart()
+    }
+
+    /// 用户改完 promise 后点"仍然开始"，跳过二次校验
+    private func actuallyStart() async {
         let trimmed = promise.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         isStarting = true

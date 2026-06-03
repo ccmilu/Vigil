@@ -67,19 +67,25 @@ final class FocusSessionManager: ObservableObject {
     // MARK: - 起 session
 
     /// 起一次会话；成功返回 sessionID。
+    /// 先校验 promise 是否足够具体。返回 suggestion 非空时调用方应让用户改 promise 再起跑。
+    /// 网络错误返回 nil（不阻塞起跑）。
+    func validatePromise(_ promise: String) async -> String? {
+        self.service = serviceFactory()
+        do {
+            let result = try await service.analyzeTask(promise)
+            return result.suggestion
+        } catch {
+            logger.warning("analyzeTask 失败，跳过校验：\(error.localizedDescription)")
+            return nil
+        }
+    }
+
     @discardableResult
     func start(promise: String, durationSeconds: Int) async -> Result<UUID, Error> {
         phase = .preparing(promise: promise)
 
         // 每次起 session 都重新拿 service（用户可能在 Settings 换了 provider）
         self.service = serviceFactory()
-
-        // 阶段 1：任务理解（失败也不阻塞，只记 warning）
-        do {
-            _ = try await service.analyzeTask(promise)
-        } catch {
-            logger.warning("analyzeTask 失败，跳过：\(error.localizedDescription)")
-        }
 
         // 建 SwiftData session
         let ctx = modelContainer.mainContext

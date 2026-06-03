@@ -209,6 +209,8 @@ struct ContentView: View {
     @Query(sort: \FocusSession.startedAt, order: .reverse)
     private var sessions: [FocusSession]
 
+    @State private var selectedSession: FocusSession?
+
     private var historyList: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("历史会话")
@@ -220,16 +222,31 @@ struct ContentView: View {
                     .font(.callout)
             } else {
                 ForEach(sessions.prefix(8), id: \.id) { s in
-                    HStack {
-                        Text(s.promise).lineLimit(1)
-                        Spacer()
-                        Text("\(s.actualDuration / 60) min")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Text(s.startedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption).foregroundStyle(.tertiary)
+                    Button {
+                        selectedSession = s
+                    } label: {
+                        HStack {
+                            Text(s.promise).lineLimit(1).foregroundStyle(.primary)
+                            Spacer()
+                            Text("\(s.actualDuration / 60) min")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Text(s.startedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption).foregroundStyle(.tertiary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 6)
+                        .contentShape(.rect)
                     }
-                    .padding(.vertical, 2)
+                    .buttonStyle(.plain)
                 }
+            }
+        }
+        .sheet(item: $selectedSession) { s in
+            SessionDetailView(session: s) {
+                selectedSession = nil
             }
         }
     }

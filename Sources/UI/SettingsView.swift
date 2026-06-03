@@ -10,8 +10,108 @@ struct SettingsView: View {
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
             ProvidersTab(store: store)
                 .tabItem { Label("AI", systemImage: "brain") }
+            StorageTab()
+                .tabItem { Label("Storage", systemImage: "externaldrive") }
         }
         .frame(minWidth: 640, idealWidth: 680, minHeight: 500, idealHeight: 540)
+    }
+}
+
+private struct StorageTab: View {
+    private var screenshotsURL: URL { ScreenshotStore.rootDirectory }
+    @State private var sizeBytes: Int64 = 0
+    @State private var fileCount: Int = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("截图与诊断日志")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("当前路径")
+                    .font(.caption.smallCaps())
+                    .foregroundStyle(.secondary)
+                Text(screenshotsURL.path)
+                    .font(.system(.callout, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.gray.opacity(0.08), in: .rect(cornerRadius: 6))
+                Text("沙盒 App 的截图必须保存在 Container 内部目录；自定义路径需要 v0.2 用 Security-Scoped Bookmarks 处理。")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    NSWorkspace.shared.open(screenshotsURL)
+                } label: {
+                    Label("在 Finder 打开", systemImage: "folder")
+                }
+                Button("刷新统计") { refresh() }
+                Spacer()
+                Text("共 \(fileCount) 个文件 · \(formatBytes(sizeBytes))")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("诊断日志（每帧决策）")
+                    .font(.caption.smallCaps())
+                    .foregroundStyle(.secondary)
+                Text("每个 session 的 diagnostic.jsonl 写在该 session 的子目录里：")
+                    .font(.callout)
+                Text("\(screenshotsURL.path)/<sessionUUID>/diagnostic.jsonl")
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            HStack {
+                Spacer()
+                Button("清空所有截图", role: .destructive) {
+                    clearAll()
+                }
+            }
+        }
+        .padding(20)
+        .onAppear { refresh() }
+    }
+
+    private func refresh() {
+        let fm = FileManager.default
+        var bytes: Int64 = 0
+        var count = 0
+        if let enumerator = fm.enumerator(at: screenshotsURL, includingPropertiesForKeys: [.fileSizeKey]) {
+            for case let url as URL in enumerator {
+                if let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) {
+                    bytes += Int64(size)
+                    count += 1
+                }
+            }
+        }
+        sizeBytes = bytes
+        fileCount = count
+    }
+
+    private func clearAll() {
+        let fm = FileManager.default
+        if let items = try? fm.contentsOfDirectory(at: screenshotsURL, includingPropertiesForKeys: nil) {
+            for url in items {
+                try? fm.removeItem(at: url)
+            }
+        }
+        refresh()
+    }
+
+    private func formatBytes(_ b: Int64) -> String {
+        let f = ByteCountFormatter()
+        f.allowedUnits = [.useMB, .useGB]
+        f.countStyle = .file
+        return f.string(fromByteCount: b)
     }
 }
 
