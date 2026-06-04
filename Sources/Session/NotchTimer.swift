@@ -175,7 +175,14 @@ final class NotchTimer: ObservableObject {
         panel.acceptsMouseMovedEvents = true
         panel.ignoresMouseEvents = false
         panel.isMovable = false
-        panel.contentViewController = NSHostingController(rootView: NotchView(state: self))
+        // 用透明 hit-test 的 NSHostingView 而不是默认的 NSHostingController：
+        // NSHostingView 默认 hitTest 在空白区域返回 self（NSPanel 整块吃事件），
+        // 折叠态岛只占很小一块但 panel 矩形 440×158 全部拦截下方点击。
+        // PassthroughHostingView 让 SwiftUI 子视图没命中时返回 nil → 事件穿透。
+        let host = PassthroughHostingView(rootView: NotchView(state: self))
+        host.frame = NSRect(origin: .zero, size: NSSize(width: panelW, height: panelH))
+        host.autoresizingMask = [.width, .height]
+        panel.contentView = host
         window = panel
     }
 }
@@ -183,6 +190,16 @@ final class NotchTimer: ObservableObject {
 private final class FloatingNotchPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+}
+
+/// hitTest 行为修正：SwiftUI 内容没命中任何子视图时返回 nil（=事件穿透到下方应用），
+/// 而不是 NSHostingView 默认的"返回 self"——后者会让 panel 整块矩形吃掉点击，
+/// 即使折叠态岛只占小小一块也会拦截下方点击。
+private final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let result = super.hitTest(point)
+        return result === self ? nil : result
+    }
 }
 
 // MARK: - View
