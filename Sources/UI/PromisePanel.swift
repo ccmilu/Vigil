@@ -23,10 +23,14 @@ enum PromisePanel {
     }
 
     /// 快捷键专用：已打开则关闭，未打开则打开。
+    /// 动画进行中（isClosing）时忽略，避免重叠创建闪烁。
     @MainActor
     static func toggle(sessionMgr: FocusSessionManager) {
         if let existing = PromisePanelWindow.shared {
-            existing.close()
+            if !existing.isClosing {
+                existing.close()
+            }
+            // 否则正在 fade-out 动画中，忽略本次按键
         } else {
             show(sessionMgr: sessionMgr)
         }
@@ -35,6 +39,9 @@ enum PromisePanel {
 
 final class PromisePanelWindow: NSPanel {
     nonisolated(unsafe) static var shared: PromisePanelWindow?
+
+    /// fade-out 动画期间的标志，防止 toggle 在动画中重入
+    var isClosing = false
 
     init(sessionMgr: FocusSessionManager) {
         super.init(
@@ -64,7 +71,20 @@ final class PromisePanelWindow: NSPanel {
             .background(.thinMaterial)
         )
     }
-    override func close() { super.close(); Self.shared = nil }
+    override func close() {
+        guard !isClosing else { return }
+        isClosing = true
+        super.close()
+        // documentWindow 动画约 200ms，等动画结束才清 shared 和重置标志，
+        // 避免动画期间 toggle 再次访问 shared = nil 造成重叠新建
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            if Self.shared === self {
+                Self.shared = nil
+            }
+            self.isClosing = false
+        }
+    }
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 }
