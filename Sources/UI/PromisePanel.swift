@@ -13,15 +13,32 @@ enum PromisePanel {
             activateMainWindow()
             return
         }
-        // 不调 NSApp.activate(ignoringOtherApps:)——它会把整个 App 推到前台，
-        // 关闭 panel 时被遮住的主窗口会跟着浮上来。
-        // 改用 orderFrontRegardless + makeKey，只让 panel 自己浮起并接管键盘。
+        // activate 之前快照两类状态，panel 关闭时要回滚：
+        // 1) 原本隐藏的主窗口（hideOnClose 用 orderOut → isVisible=false）——
+        //    activate 可能让 SwiftUI 把它们拉回前台，关闭时要重新 orderOut。
+        // 2) 原本在前台的其他 App——关闭 panel 后让它重新 activate，
+        //    实现 Spotlight 那种"用完即走"、不抢前台的体感。
+        let hiddenMainsBeforeActivate = NSApp.windows.filter {
+            $0.title == "Focus" && !$0.isVisible
+        }
+        let prevFrontApp = NSWorkspace.shared.frontmostApplication
+
+        // 必须先 activate App，否则 makeKey() 在 App 非 active 时静默失效——
+        // 快捷键 / 菜单栏触发时其他 App 在前台，panel 会浮出但拿不到键盘焦点。
+        NSApp.activate(ignoringOtherApps: true)
         if let existing = PromisePanelWindow.shared {
             existing.orderFrontRegardless()
             existing.makeKey()
             return
         }
         let win = PromisePanelWindow(sessionMgr: sessionMgr)
+        win.hiddenMainsBeforeActivate = hiddenMainsBeforeActivate
+        // prev app 是 Focus 自己（如从主窗口按钮触发）就别记录，避免关 panel 后
+        // 自己再 activate 自己造成主窗口闪烁
+        if let prev = prevFrontApp,
+           prev.bundleIdentifier != Bundle.main.bundleIdentifier {
+            win.prevFrontAppBeforeActivate = prev
+        }
         PromisePanelWindow.shared = win
         // 手动从 UserDefaults 还原 frame；首次/无记录则居中。
         // 不用 setFrameAutosaveName，避免 documentWindow 动画期间 frame
@@ -77,6 +94,15 @@ final class PromisePanelWindow: NSPanel {
     /// fade-out 动画期间的标志，防止 toggle 在动画中重入
     var isClosing = false
 
+    /// show() 时记录的"本来是隐藏的主窗口"。close 后要把它们 orderOut，
+    /// 避免 NSApp.activate 把 hideOnClose 隐藏的主窗口意外拉回前台。
+    var hiddenMainsBeforeActivate: [NSWindow] = []
+
+    /// show() 时记录的"原本在前台的其他 App"。close 后让它重新 activate，
+    /// 实现 Spotlight 那种用完即走、不抢前台的体感。
+    /// 必须强引用——NSRunningApplication 没人持有会立刻释放，weak 会变 nil。
+    var prevFrontAppBeforeActivate: NSRunningApplication?
+
     init(sessionMgr: FocusSessionManager) {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 540, height: 320),
@@ -117,6 +143,18 @@ final class PromisePanelWindow: NSPanel {
             NSStringFromRect(self.frame),
             forKey: PromisePanel.savedFrameKey
         )
+
+        // 立即回滚 activate 的副作用——必须在 super.close() 触发 fade-out 之前，
+        // 否则用户会看到主窗口先浮起来一下再回去。
+        for w in hiddenMainsBeforeActivate where w.isVisible {
+            w.orderOut(nil)
+        }
+        hiddenMainsBeforeActivate.removeAll()
+        if let prev = prevFrontAppBeforeActivate, !prev.isTerminated {
+            prev.activate()
+        }
+        prevFrontAppBeforeActivate = nil
+
         super.close()
         // documentWindow 动画约 200ms，等动画结束才清 shared 和重置标志，
         // 避免动画期间 toggle 再次访问 shared = nil 造成重叠新建
