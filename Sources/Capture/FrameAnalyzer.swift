@@ -59,6 +59,9 @@ actor FrameAnalyzer {
         // Gate 1: idle
         let idleSec = MainActorBridge.runSync { IdleDetector.secondsSinceLastInput() }
         if idleSec >= config.idleThreshold {
+            // 关键：lastLevel 也要切到 .idle，否则 distract → idle → distract 的回程
+            // 会因 lastLevel 仍是 .distracted 算成 "未跳变"，SessionManager 不弹遮罩
+            lastLevel = .idle
             return await record(.skippedIdle(seconds: idleSec), at: now)
         }
 
