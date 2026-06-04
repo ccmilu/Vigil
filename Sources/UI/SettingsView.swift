@@ -26,16 +26,22 @@ struct SettingsView: View {
             minWidth: 520, idealWidth: 560, maxWidth: 600,
             minHeight: 440, idealHeight: 480, maxHeight: 640
         )
-        .overlay(alignment: .top) {
-            // tab bar 区域加 vibrancy material 遮罩，让滚动到这里的内容看不清。
-            // SwiftUI 在 macOS 26 上 tab bar 用 AppKit 渲染在 SwiftUI layer 之上，
-            // 这层 overlay 不会盖住 tab 按钮本身。
-            // allowsHitTesting(false) 保证 tab 点击仍能透过。
-            Rectangle()
-                .fill(.thickMaterial)
-                .frame(height: 80)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
+        .modifier(TabBarVibrancyBackground())
+    }
+}
+
+/// 给 tab bar 区域加一层 regular material vibrancy 衬底，
+/// 让滚动内容滚到 tab bar 后面时被模糊遮住，视觉上分层。
+/// toolbarBackgroundVisibility 是 macOS 15+ API，旧系统降级到只设 toolbarBackground。
+private struct TabBarVibrancyBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content
+                .toolbarBackground(.regularMaterial, for: .windowToolbar)
+                .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+        } else {
+            content
+                .toolbarBackground(.regularMaterial, for: .windowToolbar)
         }
     }
 }
