@@ -248,7 +248,10 @@ final class FocusSessionManager: ObservableObject {
         s.status = status
         s.stopReason = stopReason
 
-        // 算时间分布（每条 AnalysisRecord 视作 captureInterval 秒，简单近似）
+        // 算时间分布（每条 AnalysisRecord 视作 captureInterval 秒）
+        // 注意：分母用 records.count × perRecord 而非 actualDuration——
+        // .skippedNoWindows / .skippedAIBusy / preparing 阶段不入库，
+        // 用 actualDuration 当分母会让 4 个 ratio 总和 < 100%，柱状图右边出现空白
         let ctx = modelContainer.mainContext
         let sid = s.id
         let descriptor = FetchDescriptor<AnalysisRecord>(
@@ -265,11 +268,11 @@ final class FocusSessionManager: ObservableObject {
             case .idle: idle += perRecord
             }
         }
-        let total = max(Double(actual), 1)
-        s.fullyRatio = fully / total
-        s.wanderingRatio = wandering / total
-        s.distractedRatio = distracted / total
-        s.idleRatio = idle / total
+        let observed = max(Double(records.count) * perRecord, 1)
+        s.fullyRatio = fully / observed
+        s.wanderingRatio = wandering / observed
+        s.distractedRatio = distracted / observed
+        s.idleRatio = idle / observed
 
         // 调 summarize
         let distractedNotes = records.filter { $0.level == .distracted }.map(\.reasoning)
