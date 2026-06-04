@@ -91,6 +91,9 @@ final class NotchTimer: ObservableObject {
     @Published var softReminderMessage: String = ""
     @Published var softReminderLevel: SoftReminderLevel = .none
 
+    /// 鼠标是否在岛上 hover——存这里让 PassthroughHostingView 能 query 算 hit rect
+    @Published var hovering: Bool = false
+
     private var window: NSPanel?
 
     private init() {}
@@ -135,6 +138,44 @@ final class NotchTimer: ObservableObject {
         self.softReminderMessage = message
         self.softReminderLevel = .idle
         self.forceExpandUntil = .distantFuture
+    }
+
+    /// 当前岛实际矩形（panel 内坐标，SwiftUI 习惯：y 向下，0=顶）。
+    /// PassthroughHostingView.hitTest 用这个判断鼠标点是否在岛上，
+    /// 岛外区域返回 nil 让点击穿透到下方应用。
+    func currentIslandRect(in panelSize: NSSize) -> NSRect {
+        let isExpanded = hovering || (forceExpandUntil.map { $0 > Date() } ?? false)
+        // 软/强提醒展开态会下移 NotchStyle.distractedBorderWidth+1，对应 SwiftUI VStack 的 padding.top
+        let isStrongAlert = level == .distracted
+        let isSoftAlert = softReminderLevel != .none
+        let topInset: CGFloat = (isExpanded && (isStrongAlert || isSoftAlert)) ? NotchStyle.distractedBorderWidth + 1 : 0
+
+        // 岛宽：折叠 / 展开各自的 content-driven 宽度
+        let islandW: CGFloat
+        let islandH: CGFloat
+        if isExpanded {
+            if NotchStyle.autoDetect {
+                islandW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
+            } else {
+                islandW = NotchStyle.manualExpandedWidth
+            }
+            islandH = NotchStyle.expandedHeight
+        } else {
+            if NotchStyle.autoDetect {
+                let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
+                let leftW = NotchStyle.levelIconSize
+                let rightW = NotchStyle.progressRingSize
+                let middle = ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra
+                islandW = sidePad + leftW + middle + rightW + sidePad
+                islandH = ScreenMetrics.menuBarHeight
+            } else {
+                islandW = NotchStyle.manualCollapsedWidth
+                islandH = NotchStyle.manualCollapsedHeight
+            }
+        }
+        let x = (panelSize.width - islandW) / 2
+        let y = topInset
+        return NSRect(x: x, y: y, width: islandW, height: islandH)
     }
 
     /// 停止 idle / wandering 软提醒（用户回来动一下 / hover 岛 / level 切换）
@@ -192,13 +233,16 @@ private final class FloatingNotchPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// hitTest 行为修正：SwiftUI 内容没命中任何子视图时返回 nil（=事件穿透到下方应用），
-/// 而不是 NSHostingView 默认的"返回 self"——后者会让 panel 整块矩形吃掉点击，
-/// 即使折叠态岛只占小小一块也会拦截下方点击。
+/// hitTest 行为修正：直接拿 NotchTimer 算出的当前岛矩形过滤鼠标命中。
+/// 岛之外的整块 panel 区域返回 nil，事件穿透到下方应用。
+/// SwiftUI 默认会让 panel 整个 frame 接收 hit-test（即使透明），所以必须在
+/// NSView 层主动拦截，不能只靠 SwiftUI 自己的 hit-test 推断。
 private final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
     override func hitTest(_ point: NSPoint) -> NSView? {
-        let result = super.hitTest(point)
-        return result === self ? nil : result
+        // NSHostingView isFlipped=true，point.y=0 是 view 顶；和 NotchView 内 VStack 顶对齐
+        let islandRect = NotchTimer.shared.currentIslandRect(in: bounds.size)
+        guard islandRect.contains(point) else { return nil }
+        return super.hitTest(point)
     }
 }
 
@@ -206,8 +250,8 @@ private final class PassthroughHostingView<Content: View>: NSHostingView<Content
 
 struct NotchView: View {
     @ObservedObject var state: NotchTimer
-    @State private var hovering = false
     @State private var now = Date()
+    private var hovering: Bool { state.hovering }
 
     /// 折叠态宽度：内容驱动 — 由实际 left/right 组件 + 刘海中央预留空白决定
     private var collapsedWidth: CGFloat {
@@ -300,7 +344,7 @@ struct NotchView: View {
             .stroke(borderColor, lineWidth: borderWidth)
         )
         .onHover { isHovering in
-            hovering = isHovering
+            state.hovering = isHovering
             // 用户 hover 到岛 = 已经"看到提醒"，立刻清掉强制展开 + 停 idle/wandering 软提醒
             if isHovering {
                 if state.forceExpandUntil != nil {
