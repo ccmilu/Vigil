@@ -26,15 +26,17 @@ struct SettingsView: View {
             minWidth: 520, idealWidth: 560, maxWidth: 600,
             minHeight: 440, idealHeight: 480, maxHeight: 640
         )
-    }
-}
-
-extension View {
-    /// 给 Settings 的 tab 内部 Form / ScrollView 加 top content margin，
-    /// 让滚动内容不会延伸到 tab bar 后面。tab bar 高度约 70-80pt。
-    /// 调这一个数字就能整体改所有 tab 的留白。
-    func settingsTabTopInset() -> some View {
-        self.contentMargins(.top, 8, for: .scrollContent)
+        .overlay(alignment: .top) {
+            // tab bar 区域加 vibrancy material 遮罩，让滚动到这里的内容看不清。
+            // SwiftUI 在 macOS 26 上 tab bar 用 AppKit 渲染在 SwiftUI layer 之上，
+            // 这层 overlay 不会盖住 tab 按钮本身。
+            // allowsHitTesting(false) 保证 tab 点击仍能透过。
+            Rectangle()
+                .fill(.thickMaterial)
+                .frame(height: 80)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+        }
     }
 }
 
@@ -141,7 +143,6 @@ private struct AlertsTab: View {
         }
         .formStyle(.grouped)
         .padding(.bottom, 8)
-        .settingsTabTopInset()
     }
 }
 
@@ -224,7 +225,6 @@ private struct CaptureTab: View {
         }
         .formStyle(.grouped)
         .padding(.bottom, 8)
-        .settingsTabTopInset()
     }
 }
 
@@ -262,7 +262,6 @@ private struct SoundTab: View {
             }
             .padding(20)
         }
-        .settingsTabTopInset()
     }
 
     private func soundPickerRow(label: String, cue: SoundPlayer.Cue, selected: Binding<String>) -> some View {
@@ -376,7 +375,6 @@ private struct DebugTab: View {
             }
         }
         .formStyle(.grouped)
-        .settingsTabTopInset()
         .alert("已重置引导", isPresented: $showRestartAlert) {
             Button("好") {}
         } message: {
