@@ -48,6 +48,7 @@ struct FocusApp: App {
                     .frame(minWidth: 560, minHeight: 420)
                     .task {
                         Notifier.setUp()
+                        StatusBarItem.shared.install(sessionMgr: sessionMgr)
                         KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
                             Task { @MainActor in
                                 PromisePanel.toggle(sessionMgr: sessionMgr)
