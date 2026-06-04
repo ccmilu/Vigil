@@ -27,8 +27,10 @@ final class AppSettings: ObservableObject {
 
     /// 持续 wandering（边缘走神）多久弹一次轻提醒（不像 distract 那么强烈）
     @AppStorage("alert.wandering.enabled") var wanderingAlertEnabled: Bool = true
-    /// wandering 持续多少秒触发提醒
+    /// wandering 持续多少秒触发首次提醒
     @AppStorage("alert.wandering.thresholdSec") var wanderingAlertThresholdSec: Int = 120
+    /// 首次提醒后，wandering 状态仍持续时每隔多少秒重弹一次
+    @AppStorage("alert.wandering.intervalSec") var wanderingAlertIntervalSec: Int = 60
 
     /// 构造 CaptureConfig（每次起 session 时调）
     func makeCaptureConfig() -> CaptureConfig {

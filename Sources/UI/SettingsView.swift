@@ -105,7 +105,7 @@ private struct AlertsTab: View {
             }
 
             Section("持续走神（wandering）") {
-                Toggle("wandering 连续过久时弹一次刘海软提醒", isOn: $settings.wanderingAlertEnabled)
+                Toggle("wandering 连续过久时弹刘海软提醒", isOn: $settings.wanderingAlertEnabled)
                 Text(verbatim: "比 distract 弱：黄色描边 + 12s 自动收回，不发声、不弹遮罩。")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -124,7 +124,25 @@ private struct AlertsTab: View {
                             .frame(width: 48, alignment: .trailing)
                             .font(.system(.body, design: .monospaced))
                     }
-                    Text("连续 wandering 多久后触发。默认 120s。回到 fully 后计时重置。")
+                    Text("连续 wandering 多久后触发首次提醒。默认 120s。回到 fully 后计时重置。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Text("间隔")
+                            .frame(width: 40, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { Double(settings.wanderingAlertIntervalSec) },
+                                set: { settings.wanderingAlertIntervalSec = Int($0) }
+                            ),
+                            in: 20...300, step: 10
+                        )
+                        Text("\(settings.wanderingAlertIntervalSec)s")
+                            .frame(width: 48, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    Text("首次提醒后，wandering 仍持续时每隔多少秒重弹一次。默认 60s。")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

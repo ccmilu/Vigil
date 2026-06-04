@@ -72,7 +72,8 @@ final class FocusSessionManager: ObservableObject {
     private var idleStreakStartedAt: Date?
     private var idleNextSoundAt: Date?
     private var wanderingStreakStartedAt: Date?
-    private var wanderingAlerted: Bool = false
+    /// wandering 下次允许弹刘海提醒的时刻；nil = 还没弹过（首次到阈值就弹）
+    private var wanderingNextAlertAt: Date?
 
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
 
@@ -579,24 +580,26 @@ final class FocusSessionManager: ObservableObject {
         }
     }
 
-    /// 持续 wandering（边缘走神）超阈值时弹一次刘海软提醒
+    /// 持续 wandering（边缘走神）超阈值时弹刘海软提醒，并每 intervalSec 重弹
     private func maybeAlertWandering(level: FocusLevel) {
         guard settings.wanderingAlertEnabled else {
             wanderingStreakStartedAt = nil
-            wanderingAlerted = false
+            wanderingNextAlertAt = nil
             return
         }
         guard level == .wandering else {
             wanderingStreakStartedAt = nil
-            wanderingAlerted = false
+            wanderingNextAlertAt = nil
             return
         }
         let now = Date()
         if wanderingStreakStartedAt == nil { wanderingStreakStartedAt = now }
         guard let start = wanderingStreakStartedAt else { return }
         let elapsed = now.timeIntervalSince(start)
-        guard elapsed >= TimeInterval(settings.wanderingAlertThresholdSec), !wanderingAlerted else { return }
-        wanderingAlerted = true
+        guard elapsed >= TimeInterval(settings.wanderingAlertThresholdSec) else { return }
+        // 首次到阈值（nextAlertAt==nil）必弹；之后每 intervalSec 才允许下一次
+        if let next = wanderingNextAlertAt, now < next { return }
         NotchTimer.shared.flashWandering(message: "走神时间有点长 · 回到正事吗？")
+        wanderingNextAlertAt = now.addingTimeInterval(TimeInterval(settings.wanderingAlertIntervalSec))
     }
 }
