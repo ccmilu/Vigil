@@ -44,6 +44,14 @@ final class FocusSessionManager: ObservableObject {
     private var currentTickTask: Task<Void, Never>?
     private var pendingTickWanted = false
 
+    /// 上次触发 distract 全套提醒（通知 / 声音 / 刘海 pulse / 全屏遮罩）的时间。
+    /// 跳出 distract 时清空。配合 distractReminderInterval 实现"持续分心也再弹"。
+    private var lastDistractAlertAt: Date?
+    /// 上次 distract 时 AI 给的 reminder 文案；持续分心再弹时复用（dhash skip 帧没新文案）
+    private var lastDistractReminder: String = ""
+    /// 持续分心多久没切回 fully/wandering，就再弹一次提醒
+    private static let distractReminderInterval: TimeInterval = 30
+
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
 
     init(
@@ -378,6 +386,7 @@ final class FocusSessionManager: ObservableObject {
                 dhashHex: result.hash?.hexString,
                 createdAt: result.at
             )
+            await maybeAlertDistraction(level: .idle, hasChanged: false, newReminder: nil, promise: session.promise)
         case .skippedNoWindows, .skippedAIBusy:
             return  // 这两种情况不入库，避免噪声
         case .skippedDhashStable(let dist):
@@ -396,6 +405,8 @@ final class FocusSessionManager: ObservableObject {
                 dhashDistance: dist,
                 createdAt: result.at
             )
+            // dhash skip 不算 level 跳变，但持续分心计时仍然要 tick
+            await maybeAlertDistraction(level: reusedLevel, hasChanged: false, newReminder: nil, promise: session.promise)
         case .analyzed(_, let dist, let level, let fromAI):
             record = AnalysisRecord(
                 session: session,
@@ -416,21 +427,59 @@ final class FocusSessionManager: ObservableObject {
             if fromAI, let ai = result.ai {
                 NotchTimer.shared.updateAIFeedback(reasoning: ai.reasoning)
             }
-
-            // 状态变化打通知 + 提示音 + 全屏遮罩 + 刘海 pulse
-            if result.hasChanged, level == .distracted {
-                let reminder = result.ai?.reminder ?? ""
-                await Notifier.notifyDistraction(reminder: reminder)
-                SoundPlayer.shared.play(.distract)
-                NotchTimer.shared.flashDistracted(reminder: reminder)
-                DistractOverlay.shared.present(
-                    reminder: reminder,
-                    promise: session.promise
-                )
-            }
+            await maybeAlertDistraction(
+                level: level,
+                hasChanged: result.hasChanged,
+                newReminder: result.ai?.reminder,
+                promise: session.promise
+            )
         }
         ctx.insert(record)
         try? ctx.save()
         self.lastAnalysis = record
+    }
+
+    /// 统一的 distract 提醒入口：
+    /// - 跳变进入 distract（hasChanged）→ 立刻弹
+    /// - 持续 distract 且距上次提醒 ≥ distractReminderInterval → 再弹一次
+    /// - 离开 distract → 清空计时和 reminder 文案，让下次进 distract 算"首次"
+    private func maybeAlertDistraction(
+        level: FocusLevel,
+        hasChanged: Bool,
+        newReminder: String?,
+        promise: String
+    ) async {
+        guard level == .distracted else {
+            lastDistractAlertAt = nil
+            lastDistractReminder = ""
+            return
+        }
+
+        let now = Date()
+        let shouldAlert: Bool
+        if hasChanged {
+            shouldAlert = true
+        } else if let last = lastDistractAlertAt,
+                  now.timeIntervalSince(last) >= Self.distractReminderInterval {
+            shouldAlert = true
+        } else {
+            shouldAlert = false
+        }
+        guard shouldAlert else { return }
+
+        // 新 reminder 非空就用新的，否则复用上次（dhash skip 帧没新文案）
+        let reminder: String
+        if let r = newReminder, !r.isEmpty {
+            reminder = r
+            lastDistractReminder = r
+        } else {
+            reminder = lastDistractReminder
+        }
+        lastDistractAlertAt = now
+
+        await Notifier.notifyDistraction(reminder: reminder)
+        SoundPlayer.shared.play(.distract)
+        NotchTimer.shared.flashDistracted(reminder: reminder)
+        DistractOverlay.shared.present(reminder: reminder, promise: promise)
     }
 }
