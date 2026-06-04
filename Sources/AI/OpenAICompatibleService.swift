@@ -83,17 +83,22 @@ struct OpenAICompatibleService: AIService {
     // MARK: - 视觉能力探测（Settings 里用）
 
     /// 给一张图，要求模型描述图中内容；用于人工验证"模型确实能看到图"。
+    /// 经过 loggedChat 包装，debug sink 可记录此次调用（stage = "describeImage"）。
     func describeImage(_ jpeg: Data) async throws -> String {
-        return try await chatVision(
-            system: """
+        let system = """
             You will be shown ONE image. Describe in ONE concise Simplified Chinese sentence \
             what specific content (windows, text, app, colors, layout) you can see in the image. \
             If you receive no image or the image is blank, reply EXACTLY: 我没有看到图片。
-            """,
-            user: "Describe what you see.",
-            imageJPEG: jpeg,
-            temperature: 0.2
-        )
+            """
+        let user = "Describe what you see."
+        return try await loggedChat(
+            stage: "describeImage",
+            system: system,
+            user: user,
+            hasImage: true
+        ) {
+            try await chatVision(system: system, user: user, imageJPEG: jpeg, temperature: 0.2)
+        }
     }
 
     // MARK: - debug wrapper
@@ -204,7 +209,9 @@ struct OpenAICompatibleService: AIService {
                 raw: String(data: data, encoding: .utf8) ?? ""
             )
         }
-        guard let content = decoded.choices.first?.message.content, !content.isEmpty else {
+        // decoded.choices.first?.message.content 的类型是 String??（外层来自 choices.first?，
+        // 内层来自 content: String?）。?? nil 将双层 Optional 压缩为单层，再 guard let 展开。
+        guard let content = decoded.choices.first?.message.content ?? nil, !content.isEmpty else {
             throw AIServiceError.noChoice
         }
         return content
@@ -265,5 +272,9 @@ struct OpenAICompatibleService: AIService {
 private struct ChatResponse: Codable {
     let choices: [Choice]
     struct Choice: Codable { let message: Message }
-    struct Message: Codable { let content: String }
+    /// content 声明为 Optional：部分兼容 provider（Kimi、DeepSeek 安全过滤场景）
+    /// 会返回 {"content": null} 或完全省略 content 字段。
+    /// 两种情况都在 sendChat 里统一抛 AIServiceError.noChoice，
+    /// 而不是让 JSONDecoder typeMismatch 导致 decodingFailed 误导用户。
+    struct Message: Codable { let content: String? }
 }
