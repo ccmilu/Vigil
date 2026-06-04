@@ -106,18 +106,23 @@ private struct NativeGlassModifier<S: Shape>: ViewModifier {
 struct GlassWindowAccessor: NSViewRepresentable {
     /// 是否同时把 titlebar 透明化（主窗口需要，sheet 不需要）
     var transparentTitlebar: Bool = false
+    /// 关闭按钮 / ⌘W 是否只隐藏窗口而不销毁实例（菜单栏 App 标准行为：
+    /// 关掉窗口后 NSApp.windows 仍能找到这个 NSWindow，菜单栏点击可重新 orderFront）
+    var hideOnClose: Bool = false
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView {
         let v = NSView()
-        DispatchQueue.main.async { apply(view: v) }
+        DispatchQueue.main.async { apply(view: v, coord: context.coordinator) }
         return v
     }
     func updateNSView(_ nsView: NSView, context: Context) {
         // sheet 偶尔会在 view 嵌入后才设好不透明 layer，重复 apply 一次兜底
-        DispatchQueue.main.async { apply(view: nsView) }
+        DispatchQueue.main.async { apply(view: nsView, coord: context.coordinator) }
     }
 
-    private func apply(view v: NSView) {
+    private func apply(view v: NSView, coord: Coordinator) {
         guard let window = v.window else { return }
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -130,6 +135,40 @@ struct GlassWindowAccessor: NSViewRepresentable {
         if transparentTitlebar {
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
+        }
+        if hideOnClose, coord.installed == false {
+            // 不要直接覆盖 delegate（SwiftUI 自己挂了 delegate 维护 view 同步），
+            // 改用 NotificationCenter 监听 + 拦截 windowShouldClose 的 NSWindow flag
+            window.isReleasedWhenClosed = false
+            coord.attach(to: window)
+        }
+    }
+
+    final class Coordinator: NSObject, NSWindowDelegate {
+        weak var window: NSWindow?
+        weak var previousDelegate: NSWindowDelegate?
+        var installed = false
+
+        func attach(to window: NSWindow) {
+            self.window = window
+            self.previousDelegate = window.delegate
+            window.delegate = self
+            installed = true
+        }
+
+        func windowShouldClose(_ sender: NSWindow) -> Bool {
+            sender.orderOut(nil)
+            return false  // 阻止真的关闭
+        }
+
+        // 转发其他 NSWindowDelegate 方法回 SwiftUI 原 delegate，保持 minimize/resize 等行为
+        override func responds(to aSelector: Selector!) -> Bool {
+            if super.responds(to: aSelector) { return true }
+            return previousDelegate?.responds(to: aSelector) ?? false
+        }
+
+        override func forwardingTarget(for aSelector: Selector!) -> Any? {
+            return previousDelegate
         }
     }
 }

@@ -64,7 +64,7 @@ struct FocusApp: App {
                         .transition(.opacity)
                 }
             }
-            .glassWindow()
+            .glassWindow(hideOnClose: true)
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
@@ -85,15 +85,15 @@ extension View {
     ///
     /// macOS 15+ 用 containerBackground；macOS 14 用普通 background fallback。
     @ViewBuilder
-    func glassWindow() -> some View {
+    func glassWindow(hideOnClose: Bool = false) -> some View {
         if #available(macOS 15.0, *) {
             self
                 .containerBackground(.thinMaterial, for: .window)
-                .background(GlassWindowAccessor(transparentTitlebar: true))
+                .background(GlassWindowAccessor(transparentTitlebar: true, hideOnClose: hideOnClose))
         } else {
             self
                 .background(.thinMaterial)
-                .background(GlassWindowAccessor(transparentTitlebar: true))
+                .background(GlassWindowAccessor(transparentTitlebar: true, hideOnClose: hideOnClose))
         }
     }
 }
