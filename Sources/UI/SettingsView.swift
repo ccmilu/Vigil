@@ -20,7 +20,10 @@ struct SettingsView: View {
             DebugTab(settings: settings)
                 .tabItem { Label("调试", systemImage: "ladybug") }
         }
-        .frame(minWidth: 520, idealWidth: 560, minHeight: 440, idealHeight: 480)
+        .frame(
+            minWidth: 520, idealWidth: 560, maxWidth: 600,
+            minHeight: 440, idealHeight: 480, maxHeight: 640
+        )
     }
 }
 
