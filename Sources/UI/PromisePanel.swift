@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum PromisePanel {
-    private static let frameAutosaveKey = "PromisePanel.frame"
+    static let savedFrameKey = "PromisePanel.frame"
 
     @MainActor
     static func show(sessionMgr: FocusSessionManager) {
@@ -13,10 +13,17 @@ enum PromisePanel {
         }
         let win = PromisePanelWindow(sessionMgr: sessionMgr)
         PromisePanelWindow.shared = win
-        // setFrameUsingName 还原上次位置；返回 false 说明首次/无记录，居中
-        let restored = win.setFrameUsingName(frameAutosaveKey)
-        win.setFrameAutosaveName(frameAutosaveKey)
-        if !restored {
+        // 手动从 UserDefaults 还原 frame；首次/无记录则居中。
+        // 不用 setFrameAutosaveName，避免 documentWindow 动画期间 frame
+        // 被动改写时被自动保存导致位置每次累积漂移。
+        if let frameString = UserDefaults.standard.string(forKey: savedFrameKey) {
+            let rect = NSRectFromString(frameString)
+            if rect.width > 0 && rect.height > 0 {
+                win.setFrame(rect, display: false)
+            } else {
+                win.center()
+            }
+        } else {
             win.center()
         }
         win.makeKeyAndOrderFront(nil)
@@ -74,6 +81,12 @@ final class PromisePanelWindow: NSPanel {
     override func close() {
         guard !isClosing else { return }
         isClosing = true
+        // 在动画启动之前保存当前 frame；动画期间 frame 可能被系统改写，
+        // 此刻保存的是用户真实拖到的位置。
+        UserDefaults.standard.set(
+            NSStringFromRect(self.frame),
+            forKey: PromisePanel.savedFrameKey
+        )
         super.close()
         // documentWindow 动画约 200ms，等动画结束才清 shared 和重置标志，
         // 避免动画期间 toggle 再次访问 shared = nil 造成重叠新建
