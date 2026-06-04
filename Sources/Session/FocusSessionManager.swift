@@ -518,6 +518,8 @@ final class FocusSessionManager: ObservableObject {
         ctx.insert(record)
         try? ctx.save()
         self.lastAnalysis = record
+        // 同步推一条到刘海岛 timeline，让 TimelineBar 实时更新
+        NotchTimer.shared.appendAnalysis(at: record.createdAt, level: record.level)
     }
 
     /// 统一的 distract 提醒入口：
