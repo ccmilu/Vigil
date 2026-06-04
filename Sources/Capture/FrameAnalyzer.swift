@@ -141,14 +141,25 @@ actor FrameAnalyzer {
                 return first
             }
             let latency = Int(Date().timeIntervalSince(start) * 1000)
-            let hasChanged = lastLevel != nil && lastLevel != result.level
+            // F1 修复：首帧 lastLevel==nil 时，若 AI 返回非 fully 状态也应视为"跳变进入非专注"。
+            // 设计意图：首帧是从"未知"进入某个 level，只要结果不是 fully（即不是"正常专注"）
+            // 就通知上层做出响应，避免遮罩在首帧分心时永不弹出。
+            // 首帧且结果为 fully 时 hasChanged=false，不触发遮罩（正常起步专注，无需打扰）。
+            let hasChanged: Bool
+            if let prev = lastLevel {
+                hasChanged = prev != result.level
+            } else {
+                // 首帧：非 fully 算"跳变进入非专注状态"
+                hasChanged = result.level != .fully
+            }
             lastAnalyzedHash = hash
             lastAnalyzedAt = now
             lastLevel = result.level
             return await record(
                 .analyzed(reason: reason, distance: distance, level: result.level, fromAI: true),
                 at: now, image: image, hash: hash,
-                front: front, ai: result, latencyMs: latency, hasChanged: hasChanged
+                front: front, ai: result, latencyMs: latency, hasChanged: hasChanged,
+                diagnosticDistance: distance
             )
         } catch {
             logger.error("AI 分析失败：\(error.localizedDescription)")
@@ -158,7 +169,7 @@ actor FrameAnalyzer {
             lastAnalyzedAt = now
             return await record(
                 .analyzed(reason: reason, distance: distance, level: level, fromAI: false),
-                at: now, image: image, hash: hash, front: front
+                at: now, image: image, hash: hash, front: front, diagnosticDistance: distance
             )
         }
     }
@@ -173,16 +184,19 @@ actor FrameAnalyzer {
         front: FrontAppDetector.Result? = nil,
         ai: FrameAnalysis? = nil,
         latencyMs: Int = 0,
-        hasChanged: Bool = false
+        hasChanged: Bool = false,
+        // F7 修复：由 tick() 将已算好的 distance 传入，record() 不再重算。
+        // 重算的问题：tick() 在调 record() 前已执行 lastAnalyzedHash = hash，
+        // 导致 distance(lastAnalyzedHash, hash) = distance(hash, hash) = 0，恒为 0。
+        // skippedIdle / skippedNoWindows / skippedAIBusy 等跳过路径传 nil，日志字段为 null。
+        diagnosticDistance: Int? = nil
     ) async -> FrameTickResult {
         // 写诊断日志
         let entry: [String: Any] = [
             "ts": isoFormatter.string(from: now),
             "sessionID": sessionID.uuidString,
             "decision": decisionName(decision),
-            "distance": (hash != nil && lastAnalyzedHash != nil)
-                ? DHashComputer.distance(lastAnalyzedHash!, hash!)
-                : NSNull(),
+            "distance": diagnosticDistance.map { $0 as Any } ?? NSNull(),
             "hash": hash?.hexString ?? NSNull(),
             "front": front?.appName ?? NSNull(),
             "ai_level": ai?.level.rawValue ?? NSNull(),

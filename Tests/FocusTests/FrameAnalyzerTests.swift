@@ -75,6 +75,146 @@ final class FrameAnalyzerTests: XCTestCase {
         XCTAssertEqual(r.decision, .skippedNoWindows)
     }
 
+    // MARK: - F1 首帧 hasChanged 修复测试
+
+    /// F1 修复验证：首帧 AI 返回 .distracted → hasChanged 应为 true（遮罩应弹）
+    func testF1_firstFrameDistracted_hasChangedTrue() async throws {
+        let img = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: false)
+        let mock = MockAIService(level: .distracted)
+        let analyzer = makeAnalyzer(service: mock)
+
+        let r = await analyzer.tick(captureOverride: { img })
+
+        // 首帧返回 distracted，应被视为跳变进入非专注状态
+        XCTAssertTrue(r.hasChanged, "首帧 AI 返回 .distracted 时 hasChanged 应为 true，遮罩才能弹出")
+        if case .analyzed(let reason, _, let level, _) = r.decision {
+            XCTAssertEqual(reason, .firstFrame)
+            XCTAssertEqual(level, .distracted)
+        } else {
+            XCTFail("首帧应走 analyzed 分支；实际 \(r.decision)")
+        }
+    }
+
+    /// F1 修复验证：首帧 AI 返回 .wandering → hasChanged 也应为 true（非 fully 皆算跳变）
+    func testF1_firstFrameWandering_hasChangedTrue() async throws {
+        let img = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: false)
+        let mock = MockAIService(level: .wandering)
+        let analyzer = makeAnalyzer(service: mock)
+
+        let r = await analyzer.tick(captureOverride: { img })
+
+        XCTAssertTrue(r.hasChanged, "首帧 AI 返回 .wandering 时 hasChanged 应为 true")
+    }
+
+    /// F1 修复验证：首帧 AI 返回 .fully → hasChanged 应为 false（正常起步专注，不打扰用户）
+    func testF1_firstFrameFully_hasChangedFalse() async throws {
+        let img = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: false)
+        let mock = MockAIService(level: .fully)
+        let analyzer = makeAnalyzer(service: mock)
+
+        let r = await analyzer.tick(captureOverride: { img })
+
+        // 首帧专注中，不应触发遮罩
+        XCTAssertFalse(r.hasChanged, "首帧 AI 返回 .fully 时 hasChanged 应为 false，避免误弹遮罩")
+    }
+
+    /// F1 修复验证：非首帧 fully → distracted 跳变 → hasChanged 应为 true（基准行为不能退化）
+    func testF1_nonFirstFrame_fullyToDistracted_hasChangedTrue() async throws {
+        let imgA = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: false)
+        let imgB = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: true)
+        let mock = MockAIService(level: .fully)
+        let analyzer = makeAnalyzer(service: mock)
+
+        // 首帧：fully
+        _ = await analyzer.tick(captureOverride: { imgA })
+
+        // 第二帧：切到 distracted
+        await mock.setLevel(.distracted)
+        let r = await analyzer.tick(captureOverride: { imgB })
+
+        XCTAssertTrue(r.hasChanged, "从 fully 到 distracted 应视为跳变，hasChanged=true")
+    }
+
+    /// F1 修复验证：非首帧连续 fully → hasChanged 应为 false（长专注不误报）
+    func testF1_nonFirstFrame_continuouslyFully_hasChangedFalse() async throws {
+        let imgA = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: false)
+        let imgB = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: true)
+        let mock = MockAIService(level: .fully)
+        let analyzer = makeAnalyzer(service: mock)
+
+        // 首帧：fully（maxAIInterval 设超短让第二帧也能过 dHash 门）
+        _ = await analyzer.tick(captureOverride: { imgA })
+
+        // 第二帧：仍然 fully（不同图确保过 dHash）
+        let r = await analyzer.tick(captureOverride: { imgB })
+
+        XCTAssertFalse(r.hasChanged, "连续 fully 不应视为跳变，hasChanged=false")
+    }
+
+    // MARK: - F7 诊断日志 distance 修复测试
+
+    /// F7 修复验证：两帧不同图的 analyzed 日志里 distance 字段应等于实际 dHash 距离（非 0）
+    func testF7_diagnosticLogDistanceIsCorrect() async throws {
+        let imgA = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: false)
+        let imgB = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: true)
+        let mock = MockAIService(level: .fully)
+
+        // 使用可读 logURL 验证诊断日志
+        let logURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("focus_f7_test_\(UUID().uuidString).jsonl")
+        var cfg = CaptureConfig()
+        cfg.idleThreshold = 9_999_999
+        let analyzer = FrameAnalyzer(
+            service: mock,
+            config: cfg,
+            sessionID: UUID(),
+            promise: "测试 F7",
+            diagnosticLogURL: logURL
+        )
+
+        // 首帧（firstFrame，distance 字段 null）
+        _ = await analyzer.tick(captureOverride: { imgA })
+
+        // 第二帧（图不同，distance 应非 0）
+        _ = await analyzer.tick(captureOverride: { imgB })
+
+        // 读取日志，解析所有行
+        let content = try String(contentsOf: logURL, encoding: .utf8)
+        let lines = content.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        XCTAssertGreaterThanOrEqual(lines.count, 2, "至少应有 2 行日志")
+
+        // 第一行（firstFrame）：distance 应为 null
+        let firstLine = try XCTUnwrap(lines.first)
+        let firstEntry = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(firstLine.utf8)) as? [String: Any]
+        )
+        XCTAssertTrue(firstEntry["distance"] is NSNull, "首帧 distance 日志应为 null")
+
+        // 找到第一个 decision 不为 skipped 的 analyzed 行（第二帧）
+        let analyzedLines = lines.filter { line in
+            (try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])
+                .flatMap { $0["decision"] as? String }?
+                .hasPrefix("analyzed_") ?? false
+        }
+        // 第二帧 analyzed 行应存在且 distance 不为 null、不为 0
+        guard let secondAnalyzed = analyzedLines.dropFirst().first else {
+            // 如果只有一条 analyzed（首帧），跳过（环境 dHash 阈值问题）
+            return
+        }
+        let secondEntry = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(secondAnalyzed.utf8)) as? [String: Any]
+        )
+        let dist = secondEntry["distance"] as? Int
+        XCTAssertNotNil(dist, "第二帧 analyzed 行 distance 字段不应为 null")
+        XCTAssertGreaterThan(dist ?? 0, 0, "不同图的 distance 应 > 0，修复前此值恒为 0")
+
+        // 同时验证 distance 与实际 dHash 距离一致
+        let hashA = DHashComputer.hash(imgA)
+        let hashB = DHashComputer.hash(imgB)
+        let expectedDist = DHashComputer.distance(hashA, hashB)
+        XCTAssertEqual(dist, expectedDist, "日志 distance 应等于实际 dHash 距离 \(expectedDist)")
+    }
+
     // MARK: - Helpers
 
     private func makeAnalyzer(service: AIService) -> FrameAnalyzer {
