@@ -39,7 +39,8 @@ final class FocusSessionManager: ObservableObject {
 
     private let modelContainer: ModelContainer
     private let serviceFactory: @MainActor (AIDebugSink?) -> AIService
-    private let settings: AppSettings
+    /// internal 以便 @testable import 测试验证 F11（convenience init 使用 AppSettings.shared）
+    let settings: AppSettings
     private var service: AIService
     private var analyzer: FrameAnalyzer?
     private var session: FocusSession?
@@ -57,23 +58,24 @@ final class FocusSessionManager: ObservableObject {
     /// 弹窗期间被设为 .distantFuture 防止重复触发；遮罩关掉后置为当前时间，
     /// 之后再过 distractReminderInterval 才会再弹下一个。
     /// 跳出 distract 时清空。
-    private var distractCooldownUntil: Date?
+    /// internal（非 private）以便 @testable import 单元测试验证跨 session 状态隔离（F4）。
+    var distractCooldownUntil: Date?
     /// 上次 distract 时 AI 给的 reminder 文案；持续分心再弹时复用（dhash skip 帧没新文案）
-    private var lastDistractReminder: String = ""
+    var lastDistractReminder: String = ""
     /// 当前一段连续 distract 已经弹了多少次。跳出 distract 时归零。
     /// 第 3 次起遮罩多一个"AI 可能误判，本次分心不再提醒"按钮。
-    private var distractAlertCount: Int = 0
+    var distractAlertCount: Int = 0
     /// 用户点过"本次分心不再提醒"——保持到跳出 distract 为止。
-    private var distractSuppressedInStreak: Bool = false
+    var distractSuppressedInStreak: Bool = false
     /// 弹到第几次起显示"本次分心不再提醒"兜底按钮
     private static let distractSuppressThreshold: Int = 3
 
     // idle / wandering 软提醒状态
-    private var idleStreakStartedAt: Date?
-    private var idleNextSoundAt: Date?
-    private var wanderingStreakStartedAt: Date?
+    var idleStreakStartedAt: Date?
+    var idleNextSoundAt: Date?
+    var wanderingStreakStartedAt: Date?
     /// wandering 下次允许弹刘海提醒的时刻；nil = 还没弹过（首次到阈值就弹）
-    private var wanderingNextAlertAt: Date?
+    var wanderingNextAlertAt: Date?
 
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
 
@@ -91,13 +93,15 @@ final class FocusSessionManager: ObservableObject {
     }
 
     /// 测试便捷构造器：直接注入固定 service。
+    /// F11 修复：改用 AppSettings.shared 而非 AppSettings()，
+    /// 避免 convenience init 创建孤立实例违反 singleton 约束。
     convenience init(
         modelContainer: ModelContainer,
         service: AIService
     ) {
         self.init(
             modelContainer: modelContainer,
-            settings: AppSettings(),
+            settings: AppSettings.shared,
             serviceFactory: { _ in service }
         )
     }
@@ -154,10 +158,24 @@ final class FocusSessionManager: ObservableObject {
     }
 
     /// 校验 promise + 顺带探活 AI 服务。
+    /// F5 修复：不再覆盖 self.service（validatePromise 与 start 共用的 self.service 赋值
+    /// 应只在 start() 里做，让 serviceFactory 和 debugSink 在真正起 session 时生效）。
+    /// validatePromise 构造临时的 service 实例：debug 开启时写到独立的
+    /// promise-validation 目录（不影响主 session 目录），关闭时 sink 为 nil。
     func validatePromise(_ promise: String) async -> PromiseValidation {
-        self.service = serviceFactory(nil)
+        // F5：构造 promise 校验阶段的 debug sink，和 session 目录隔离
+        let validationSink: AIDebugSink? = {
+            guard settings.debugEnabled else { return nil }
+            let dir = ScreenshotStore.rootDirectory
+                .appendingPathComponent("validation")
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let ts = Int(Date().timeIntervalSince1970)
+            return AIDebugSink(url: dir.appendingPathComponent("promise-\(ts).jsonl"))
+        }()
+        // 构造一次性的临时 service，不覆写 self.service
+        let tempService = serviceFactory(validationSink)
         do {
-            let result = try await service.analyzeTask(promise)
+            let result = try await tempService.analyzeTask(promise)
             if let s = result.suggestion, !s.isEmpty {
                 return .needsClarification(s)
             }
@@ -234,6 +252,21 @@ final class FocusSessionManager: ObservableObject {
         await endSession(status: .autoCompleted, stopReason: nil)
     }
 
+    /// F4 修复：统一重置所有 per-session 提醒状态。
+    /// 在 endSession 末尾调用，确保下一 session 第一帧的 distract/idle/wandering
+    /// 状态不会受上一 session 残留影响（否则 distractCooldownUntil=.distantFuture
+    /// 或 distractSuppressedInStreak=true 会导致整段 distract 静默）。
+    private func resetPerSessionAlertState() {
+        distractCooldownUntil = nil
+        lastDistractReminder = ""
+        distractAlertCount = 0
+        distractSuppressedInStreak = false
+        idleStreakStartedAt = nil
+        idleNextSoundAt = nil
+        wanderingStreakStartedAt = nil
+        wanderingNextAlertAt = nil
+    }
+
     private func endSession(status: SessionStatus, stopReason: String?) async {
         guard let s = session else { return }
         stopCountdown()
@@ -305,6 +338,8 @@ final class FocusSessionManager: ObservableObject {
         self.session = nil
         self.analyzer = nil
         self.startedAt = nil
+        // F4 修复：清理所有 per-session 提醒状态，防止残留影响下一 session
+        resetPerSessionAlertState()
         SoundPlayer.shared.play(.complete)
     }
 
@@ -392,6 +427,12 @@ final class FocusSessionManager: ObservableObject {
     private func runOneTickInner() async {
         guard let analyzer = analyzer, let s = session else { return }
         let result = await analyzer.tick()
+        // F3 修复：AI 任务飞行期间 endSession 可能已将 phase 切到 .analyzing 或之后。
+        // 此时 stopTicking 只 cancel task 不 await，in-flight 的 analyzeFrame 网络请求
+        // 会在 summarize 期间回来并走 persistTick → maybeAlertDistraction，
+        // 导致在复盘页弹出 DistractOverlay。此 guard 在 await 返回后二次检查 phase，
+        // 非 running 时直接丢弃结果，不落库也不触发任何提醒。
+        guard case .running = phase else { return }
         await persistTick(result: result, session: s)
     }
 

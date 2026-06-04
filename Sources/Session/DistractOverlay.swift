@@ -31,7 +31,12 @@ final class DistractOverlay {
     ///   通常仅在同一段 distract 内连续弹到第 3 次时由 SessionManager 传 true）
     func present(reminder: String, promise: String, showSuppress: Bool = false) {
         guard enabled else { return }
-        dismiss()
+        // F2 修复：改用 dismissSilently() 而非 dismiss()。
+        // 若旧遮罩仍显示时新一次 distract 触发 present()，SessionManager 已在调
+        // present() 前把 onClosed 替换为新一轮的 cooldown 闭包。若此处调 dismiss()，
+        // 则触发新闭包 → cooldown 从遮罩"被替换"瞬间起算而非用户点关闭时起算。
+        // dismissSilently() 只关窗口、取消 autoCloseTask，不触发 onClosed。
+        dismissSilently()
         guard let screen = NSScreen.main else { return }
 
         // 用 NSPanel + 全屏覆盖；NSScreen.frame 已含菜单栏，但 setFrame 后内容会自动撑满
@@ -86,6 +91,20 @@ final class DistractOverlay {
         window?.contentViewController = nil
         window = nil
         if wasShown { onClosed?() }
+    }
+
+    /// F2 修复：静默关闭遮罩，不触发 onClosed 回调。
+    /// present() 内部调用此方法替代 dismiss()，避免弹出新遮罩时
+    /// 旧遮罩的 dismiss 触发已更新的 onClosed（新 session 的 cooldown 闭包），
+    /// 导致 cooldown 从"遮罩被替换瞬间"起算而非用户真正点关闭时起算。
+    /// autoCloseTask 仍被取消，确保旧的 30s 自动关定时器不残留。
+    func dismissSilently() {
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+        window?.orderOut(nil)
+        window?.contentViewController = nil
+        window = nil
+        // 不调 onClosed，由 present() 调用方自行管理 cooldown 计时
     }
 }
 
