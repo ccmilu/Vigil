@@ -13,6 +13,9 @@ final class DistractOverlay {
 
     private var window: NSWindow?
     private var autoCloseTask: Task<Void, Never>?
+    /// 外部监听 overlay 真正关闭的回调（点按钮 / 自动关 / 主动 dismiss 都会触发）。
+    /// FocusSessionManager 用它把"持续分心 30s 再弹"的计时基准从弹窗瞬间挪到关闭瞬间。
+    var onClosed: (() -> Void)?
 
     /// 设置开关：用户可以在 Settings 关掉这个体验
     var enabled: Bool {
@@ -66,11 +69,13 @@ final class DistractOverlay {
     }
 
     func dismiss() {
+        let wasShown = (window != nil)
         autoCloseTask?.cancel()
         autoCloseTask = nil
         window?.orderOut(nil)
         window?.contentViewController = nil
         window = nil
+        if wasShown { onClosed?() }
     }
 }
 

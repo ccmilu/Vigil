@@ -44,9 +44,11 @@ final class FocusSessionManager: ObservableObject {
     private var currentTickTask: Task<Void, Never>?
     private var pendingTickWanted = false
 
-    /// 上次触发 distract 全套提醒（通知 / 声音 / 刘海 pulse / 全屏遮罩）的时间。
-    /// 跳出 distract 时清空。配合 distractReminderInterval 实现"持续分心也再弹"。
-    private var lastDistractAlertAt: Date?
+    /// 30s 间歇计时的基准时刻——**遮罩"关闭"的瞬间**（点按钮 / 自动关）。
+    /// 弹窗期间被设为 .distantFuture 防止重复触发；遮罩关掉后置为当前时间，
+    /// 之后再过 distractReminderInterval 才会再弹下一个。
+    /// 跳出 distract 时清空。
+    private var distractCooldownUntil: Date?
     /// 上次 distract 时 AI 给的 reminder 文案；持续分心再弹时复用（dhash skip 帧没新文案）
     private var lastDistractReminder: String = ""
     /// 持续分心多久没切回 fully/wandering，就再弹一次提醒
@@ -441,8 +443,12 @@ final class FocusSessionManager: ObservableObject {
 
     /// 统一的 distract 提醒入口：
     /// - 跳变进入 distract（hasChanged）→ 立刻弹
-    /// - 持续 distract 且距上次提醒 ≥ distractReminderInterval → 再弹一次
-    /// - 离开 distract → 清空计时和 reminder 文案，让下次进 distract 算"首次"
+    /// - 持续 distract 且**已过 cooldown**（now ≥ distractCooldownUntil）→ 再弹一次
+    /// - 离开 distract → 清空 cooldown 和 reminder 文案，让下次进 distract 算"首次"
+    ///
+    /// 触发弹窗时把 cooldownUntil 设为 .distantFuture（弹窗期间不重复触发），
+    /// DistractOverlay.onClosed 回调里把它设为"now + interval"，
+    /// 这样 30s 是从**遮罩关闭那一刻**开始算，不是弹窗瞬间——避免遮罩刚关又立刻弹下一个。
     private func maybeAlertDistraction(
         level: FocusLevel,
         hasChanged: Bool,
@@ -450,7 +456,7 @@ final class FocusSessionManager: ObservableObject {
         promise: String
     ) async {
         guard level == .distracted else {
-            lastDistractAlertAt = nil
+            distractCooldownUntil = nil
             lastDistractReminder = ""
             return
         }
@@ -459,8 +465,7 @@ final class FocusSessionManager: ObservableObject {
         let shouldAlert: Bool
         if hasChanged {
             shouldAlert = true
-        } else if let last = lastDistractAlertAt,
-                  now.timeIntervalSince(last) >= Self.distractReminderInterval {
+        } else if let until = distractCooldownUntil, now >= until {
             shouldAlert = true
         } else {
             shouldAlert = false
@@ -475,7 +480,12 @@ final class FocusSessionManager: ObservableObject {
         } else {
             reminder = lastDistractReminder
         }
-        lastDistractAlertAt = now
+        // 弹窗期间把 cooldown 推到很远，防止下一个 tick 又触发；
+        // onClosed 回调里改成"now + interval"，从关闭瞬间开始计时
+        distractCooldownUntil = .distantFuture
+        DistractOverlay.shared.onClosed = { [weak self] in
+            self?.distractCooldownUntil = Date().addingTimeInterval(Self.distractReminderInterval)
+        }
 
         await Notifier.notifyDistraction(reminder: reminder)
         SoundPlayer.shared.play(.distract)
