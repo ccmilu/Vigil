@@ -67,6 +67,14 @@ enum NotchStyle {
 
 // MARK: - 状态
 
+/// 软提醒级别——distract 之外的两种轻量提示。
+/// 决定刘海描边色 + 文案样式；distract 仍由 state.level == .distracted 判断（最高优先级）。
+enum SoftReminderLevel {
+    case none
+    case wandering   // 持续走神，黄色描边 + 12s 展开
+    case idle        // 长时间不在电脑前，橙色描边 + 持续展开 + 周期声音
+}
+
 @MainActor
 final class NotchTimer: ObservableObject {
     static let shared = NotchTimer()
@@ -78,6 +86,10 @@ final class NotchTimer: ObservableObject {
     @Published var reasoning: String = ""     // AI 每帧的活动描述
     @Published var reminder: String = ""      // 仅 distracted 时的拉回提醒
     @Published var forceExpandUntil: Date? = nil
+
+    /// idle / wandering 软提醒文案（distract 走 reminder 字段）
+    @Published var softReminderMessage: String = ""
+    @Published var softReminderLevel: SoftReminderLevel = .none
 
     private var window: NSPanel?
 
@@ -109,6 +121,30 @@ final class NotchTimer: ObservableObject {
     func flashDistracted(reminder: String) {
         self.reminder = reminder
         self.forceExpandUntil = Date().addingTimeInterval(NotchStyle.distractedFlashSeconds)
+    }
+
+    /// 持续走神软提示：12s 展开 + 黄色描边
+    func flashWandering(message: String, seconds: TimeInterval = 12) {
+        self.softReminderMessage = message
+        self.softReminderLevel = .wandering
+        self.forceExpandUntil = Date().addingTimeInterval(seconds)
+    }
+
+    /// 长时间 idle 软提示：持续展开 + 橙色描边，直到 stopSoftReminder() 调用
+    func flashIdle(message: String) {
+        self.softReminderMessage = message
+        self.softReminderLevel = .idle
+        self.forceExpandUntil = .distantFuture
+    }
+
+    /// 停止 idle / wandering 软提醒（用户回来动一下 / hover 岛 / level 切换）
+    func stopSoftReminder() {
+        softReminderLevel = .none
+        softReminderMessage = ""
+        if let until = forceExpandUntil, until == .distantFuture {
+            // 仅清掉 idle 那种"无限期"展开；wandering 让自然超时
+            forceExpandUntil = nil
+        }
     }
 
     private func createWindow() {
@@ -190,7 +226,7 @@ struct NotchView: View {
                 )
                 // 仅 distract 展开态下移：红色描边较粗（2pt），center-aligned 上半部分
                 // 贴屏幕顶会被截掉，反向圆角看不到。其他状态描边细（0.5pt）不需要补偿。
-                .padding(.top, (isExpanded && isDistracted) ? NotchStyle.distractedBorderWidth + 1 : 0)
+                .padding(.top, (isExpanded && (isDistracted || isSoftAlert)) ? NotchStyle.distractedBorderWidth + 1 : 0)
                 .animation(
                     .spring(response: NotchStyle.springResponse, dampingFraction: NotchStyle.springDamping),
                     value: isExpanded
@@ -210,6 +246,24 @@ struct NotchView: View {
     }
 
     private var isDistracted: Bool { state.level == .distracted }
+    private var isStrongAlert: Bool { isDistracted }
+    private var isSoftAlert: Bool {
+        state.softReminderLevel == .idle || state.softReminderLevel == .wandering
+    }
+
+    /// 描边色优先级：distract > idle > wandering > 默认浅灰
+    private var borderColor: Color {
+        if isDistracted { return NotchStyle.distractedBorderColor }
+        switch state.softReminderLevel {
+        case .idle: return .orange
+        case .wandering: return .yellow
+        case .none: return Color.white.opacity(0.08)
+        }
+    }
+    private var borderWidth: CGFloat {
+        if isDistracted { return NotchStyle.distractedBorderWidth }
+        return isSoftAlert ? 1.5 : 0.5
+    }
 
     /// 岛本体 — 反向圆角形状 + 描边 + 内容，共享同一 shape 保证缩放同步
     private var island: some View {
@@ -226,17 +280,18 @@ struct NotchView: View {
                 topCornerRadius: NotchStyle.topCornerRadius,
                 bottomCornerRadius: NotchStyle.bottomCornerRadius
             )
-            .stroke(
-                isDistracted ? NotchStyle.distractedBorderColor : Color.white.opacity(0.08),
-                lineWidth: isDistracted ? NotchStyle.distractedBorderWidth : 0.5
-            )
+            .stroke(borderColor, lineWidth: borderWidth)
         )
         .onHover { isHovering in
             hovering = isHovering
-            // 用户 hover 到岛 = 已经"看到提醒"，立刻清掉强制展开，
-            // 鼠标移开后岛能正常折叠，不再被 forceExpandUntil 卡住
-            if isHovering, state.forceExpandUntil != nil {
-                state.forceExpandUntil = nil
+            // 用户 hover 到岛 = 已经"看到提醒"，立刻清掉强制展开 + 停 idle/wandering 软提醒
+            if isHovering {
+                if state.forceExpandUntil != nil {
+                    state.forceExpandUntil = nil
+                }
+                if state.softReminderLevel != .none {
+                    state.stopSoftReminder()
+                }
             }
         }
         .onTapGesture {
@@ -363,6 +418,23 @@ struct NotchView: View {
                         .foregroundStyle(.red)
                         .padding(.top, 2)
                     Text(state.reminder)
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                }
+                .padding(.top, 2)
+            }
+
+            // idle / wandering 软提醒文案
+            if !isDistracted, isSoftAlert, !state.softReminderMessage.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: state.softReminderLevel == .idle
+                          ? "moon.zzz.fill"
+                          : "wind")
+                        .font(.caption2)
+                        .foregroundStyle(state.softReminderLevel == .idle ? .orange : .yellow)
+                        .padding(.top, 2)
+                    Text(state.softReminderMessage)
                         .font(.callout.weight(.medium))
                         .foregroundStyle(.white)
                         .lineLimit(2)

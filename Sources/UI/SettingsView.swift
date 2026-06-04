@@ -13,6 +13,8 @@ struct SettingsView: View {
                 .tabItem { Label("AI", systemImage: "brain") }
             CaptureTab(settings: settings)
                 .tabItem { Label("截屏", systemImage: "camera.viewfinder") }
+            AlertsTab(settings: settings)
+                .tabItem { Label("提醒", systemImage: "bell.badge") }
             SoundTab()
                 .tabItem { Label("声音", systemImage: "speaker.wave.2") }
             StorageTab()
@@ -24,6 +26,112 @@ struct SettingsView: View {
             minWidth: 520, idealWidth: 560, maxWidth: 600,
             minHeight: 440, idealHeight: 480, maxHeight: 640
         )
+    }
+}
+
+private struct AlertsTab: View {
+    @ObservedObject var settings: AppSettings
+
+    var body: some View {
+        Form {
+            Section("分心持续提醒") {
+                Toggle("分心未回时每隔一段时间再弹一次", isOn: $settings.distractIntervalEnabled)
+                Text(verbatim: "首次跳变到分心一定会弹遮罩；关掉此项后，持续分心不再额外提醒，直到状态切换。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if settings.distractIntervalEnabled {
+                    HStack {
+                        Text("间隔")
+                            .frame(width: 40, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { Double(settings.distractIntervalSec) },
+                                set: { settings.distractIntervalSec = Int($0) }
+                            ),
+                            in: 10...300, step: 10
+                        )
+                        Text("\(settings.distractIntervalSec)s")
+                            .frame(width: 48, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    Text("从遮罩关闭瞬间起计算。默认 30s。第 3 次起遮罩多一个 \"AI 可能误判，本次不再提醒\" 按钮。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("长时间不在电脑前（idle）") {
+                Toggle("idle 持续过久时通过刘海岛 + 声音召回", isOn: $settings.idleAlertEnabled)
+                Text(verbatim: "用户长时间无键鼠输入 = 可能离开电脑去玩手机。靠声音提醒（不看屏幕）。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if settings.idleAlertEnabled {
+                    HStack {
+                        Text("阈值")
+                            .frame(width: 40, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { Double(settings.idleAlertThresholdSec) },
+                                set: { settings.idleAlertThresholdSec = Int($0) }
+                            ),
+                            in: 30...600, step: 30
+                        )
+                        Text("\(settings.idleAlertThresholdSec)s")
+                            .frame(width: 48, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    Text("idle 持续多久才开始提醒。默认 120s。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Text("重弹")
+                            .frame(width: 40, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { Double(settings.idleAlertRepeatSec) },
+                                set: { settings.idleAlertRepeatSec = Int($0) }
+                            ),
+                            in: 10...120, step: 5
+                        )
+                        Text("\(settings.idleAlertRepeatSec)s")
+                            .frame(width: 48, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    Text("idle 持续期间每隔多少秒再播放一次提示音。默认 30s。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("持续走神（wandering）") {
+                Toggle("wandering 连续过久时弹一次刘海软提醒", isOn: $settings.wanderingAlertEnabled)
+                Text(verbatim: "比 distract 弱：黄色描边 + 12s 自动收回，不发声、不弹遮罩。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if settings.wanderingAlertEnabled {
+                    HStack {
+                        Text("阈值")
+                            .frame(width: 40, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { Double(settings.wanderingAlertThresholdSec) },
+                                set: { settings.wanderingAlertThresholdSec = Int($0) }
+                            ),
+                            in: 30...600, step: 30
+                        )
+                        Text("\(settings.wanderingAlertThresholdSec)s")
+                            .frame(width: 48, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    Text("连续 wandering 多久后触发。默认 120s。回到 fully 后计时重置。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.bottom, 8)
     }
 }
 

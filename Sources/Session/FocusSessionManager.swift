@@ -65,10 +65,14 @@ final class FocusSessionManager: ObservableObject {
     private var distractAlertCount: Int = 0
     /// 用户点过"本次分心不再提醒"——保持到跳出 distract 为止。
     private var distractSuppressedInStreak: Bool = false
-    /// 持续分心多久没切回 fully/wandering，就再弹一次提醒
-    private static let distractReminderInterval: TimeInterval = 30
     /// 弹到第几次起显示"本次分心不再提醒"兜底按钮
     private static let distractSuppressThreshold: Int = 3
+
+    // idle / wandering 软提醒状态
+    private var idleStreakStartedAt: Date?
+    private var idleNextSoundAt: Date?
+    private var wanderingStreakStartedAt: Date?
+    private var wanderingAlerted: Bool = false
 
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
 
@@ -413,6 +417,8 @@ final class FocusSessionManager: ObservableObject {
                 createdAt: result.at
             )
             await maybeAlertDistraction(level: .idle, hasChanged: false, newReminder: nil, promise: session.promise)
+            maybeAlertIdle(level: .idle)
+            maybeAlertWandering(level: .idle)
         case .skippedNoWindows, .skippedAIBusy:
             return  // 这两种情况不入库，避免噪声
         case .skippedDhashStable(let dist):
@@ -431,8 +437,10 @@ final class FocusSessionManager: ObservableObject {
                 dhashDistance: dist,
                 createdAt: result.at
             )
-            // dhash skip 不算 level 跳变，但持续分心计时仍然要 tick
+            // dhash skip 不算 level 跳变，但所有提醒计时仍然要 tick
             await maybeAlertDistraction(level: reusedLevel, hasChanged: false, newReminder: nil, promise: session.promise)
+            maybeAlertIdle(level: reusedLevel)
+            maybeAlertWandering(level: reusedLevel)
         case .analyzed(_, let dist, let level, let fromAI):
             record = AnalysisRecord(
                 session: session,
@@ -459,6 +467,8 @@ final class FocusSessionManager: ObservableObject {
                 newReminder: result.ai?.reminder,
                 promise: session.promise
             )
+            maybeAlertIdle(level: level)
+            maybeAlertWandering(level: level)
         }
         ctx.insert(record)
         try? ctx.save()
@@ -494,7 +504,9 @@ final class FocusSessionManager: ObservableObject {
         let now = Date()
         let shouldAlert: Bool
         if hasChanged {
-            shouldAlert = true
+            shouldAlert = true  // 首次跳变必弹，不受 intervalEnabled 影响
+        } else if !settings.distractIntervalEnabled {
+            shouldAlert = false  // 关了间歇提醒，持续 distract 不再弹
         } else if let until = distractCooldownUntil, now >= until {
             shouldAlert = true
         } else {
@@ -516,8 +528,9 @@ final class FocusSessionManager: ObservableObject {
         // 弹窗期间把 cooldown 推到很远，防止下一个 tick 又触发；
         // onClosed 回调里改成"now + interval"，从关闭瞬间开始计时
         distractCooldownUntil = .distantFuture
+        let intervalSec = settings.distractIntervalSec
         DistractOverlay.shared.onClosed = { [weak self] in
-            self?.distractCooldownUntil = Date().addingTimeInterval(Self.distractReminderInterval)
+            self?.distractCooldownUntil = Date().addingTimeInterval(TimeInterval(intervalSec))
         }
         DistractOverlay.shared.onSuppress = { [weak self] in
             self?.distractSuppressedInStreak = true
@@ -531,5 +544,59 @@ final class FocusSessionManager: ObservableObject {
             promise: promise,
             showSuppress: showSuppress
         )
+    }
+
+    /// 长时间 idle（不在电脑前）软提醒：刘海岛展开 + 周期性声音召回
+    private func maybeAlertIdle(level: FocusLevel) {
+        guard settings.idleAlertEnabled else {
+            idleStreakStartedAt = nil
+            idleNextSoundAt = nil
+            return
+        }
+        guard level == .idle else {
+            // 跳出 idle = 用户回来动了一下，立刻停
+            if idleStreakStartedAt != nil {
+                NotchTimer.shared.stopSoftReminder()
+            }
+            idleStreakStartedAt = nil
+            idleNextSoundAt = nil
+            return
+        }
+        let now = Date()
+        if idleStreakStartedAt == nil { idleStreakStartedAt = now }
+        guard let start = idleStreakStartedAt else { return }
+        let elapsed = now.timeIntervalSince(start)
+        guard elapsed >= TimeInterval(settings.idleAlertThresholdSec) else { return }
+
+        // 已进入 idle 软提醒：首次弹刘海 + 声音；之后每 idleAlertRepeatSec 重弹声音
+        if NotchTimer.shared.softReminderLevel != .idle {
+            NotchTimer.shared.flashIdle(message: "似乎不在电脑前 · 回来一下？")
+            SoundPlayer.shared.play(.distract)
+            idleNextSoundAt = now.addingTimeInterval(TimeInterval(settings.idleAlertRepeatSec))
+        } else if let next = idleNextSoundAt, now >= next {
+            SoundPlayer.shared.play(.distract)
+            idleNextSoundAt = now.addingTimeInterval(TimeInterval(settings.idleAlertRepeatSec))
+        }
+    }
+
+    /// 持续 wandering（边缘走神）超阈值时弹一次刘海软提醒
+    private func maybeAlertWandering(level: FocusLevel) {
+        guard settings.wanderingAlertEnabled else {
+            wanderingStreakStartedAt = nil
+            wanderingAlerted = false
+            return
+        }
+        guard level == .wandering else {
+            wanderingStreakStartedAt = nil
+            wanderingAlerted = false
+            return
+        }
+        let now = Date()
+        if wanderingStreakStartedAt == nil { wanderingStreakStartedAt = now }
+        guard let start = wanderingStreakStartedAt else { return }
+        let elapsed = now.timeIntervalSince(start)
+        guard elapsed >= TimeInterval(settings.wanderingAlertThresholdSec), !wanderingAlerted else { return }
+        wanderingAlerted = true
+        NotchTimer.shared.flashWandering(message: "走神时间有点长 · 回到正事吗？")
     }
 }
