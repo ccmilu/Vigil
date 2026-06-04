@@ -177,11 +177,17 @@ private struct PromisePanelContent: View {
     /// 用 @AppStorage 持久化最近一次输入，下次打开面板自动预填
     @AppStorage("promise.lastInput") private var promise: String = ""
     @AppStorage("promise.lastDurationMin") private var durationMin: Int = 25
+    /// 文本框专属持久化——只在用户键入时更新，点预设按钮不动它，
+    /// 让"上次自定义输入"独立于"上次选择的时长"
+    @AppStorage("promise.lastCustomMin") private var customMin: Int = 25
     @State private var isStarting = false
     @State private var aiSuggestion: String? = nil   // 非 nil 说明 promise 不够具体
     @State private var aiUnreachable: String? = nil  // 非 nil 说明 AI 服务连不上
     @State private var hasAskedAI = false
     @FocusState private var focused: Bool
+    /// 自定义时长 TextField 的焦点状态——用户一旦聚焦就把当前选中时长切到 customMin，
+    /// 哪怕没敲键盘也算"用了自定义路径"
+    @FocusState private var customFocused: Bool
 
     /// 从 SwiftData 读取用户时长预设，按 slot 升序排列。
     /// 需要 modelContainer 注入到视图树（由 PromisePanelWindow 在 NSHostingController 注入）。
@@ -253,10 +259,35 @@ private struct PromisePanelContent: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 ForEach(presetMinutes, id: \.self) { m in
-                    Button("\(m)") { durationMin = m }
-                        .glassButtonStyle(prominent: durationMin == m)
-                        .controlSize(.small)
+                    Button("\(m)") {
+                        durationMin = m
+                        // 主动把焦点踢出文本框——否则下次再点文本框 customFocused
+                        // 不会从 false 变 true，onChange 不 fire，无法切回 customMin
+                        customFocused = false
+                    }
+                    .glassButtonStyle(prominent: durationMin == m)
+                    .controlSize(.small)
                 }
+                // 自定义输入——绑独立的 customMin。输入即生效（同步到 durationMin
+                // 让"开始 X 分钟"反映当前输入），但点预设不回写 customMin，
+                // 文本框始终保留"上次手动输入的数字"
+                // 前置"自定义"标签让用户一眼看出这是另一种输入路径
+                Text("自定义")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                TextField("", value: $customMin, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.small)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 48)
+                    .focused($customFocused)
+                    .onChange(of: customFocused) { _, isFocused in
+                        // 聚焦即生效——支持"沿用上次自定义值"而无需重新键入
+                        if isFocused { durationMin = customMin }
+                    }
+                    .onChange(of: customMin) { _, newValue in
+                        durationMin = newValue
+                    }
                 Text("分钟")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -325,9 +356,13 @@ private struct PromisePanelContent: View {
     private func actuallyStart() async {
         let trimmed = promise.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        // 自定义输入可能是 0 / 负数 / 极大值，clamp 到 1-300 分钟（5h 上限）
+        // 同时回写 durationMin，让"开始 X 分钟"按钮显示一致
+        let safeMinutes = max(1, min(300, durationMin))
+        if safeMinutes != durationMin { durationMin = safeMinutes }
         isStarting = true
         defer { isStarting = false }
-        _ = await sessionMgr.start(promise: trimmed, durationSeconds: durationMin * 60)
+        _ = await sessionMgr.start(promise: trimmed, durationSeconds: safeMinutes * 60)
         dismiss()
     }
 }
