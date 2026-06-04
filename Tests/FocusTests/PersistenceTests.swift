@@ -56,4 +56,55 @@ final class PersistenceTests: XCTestCase {
         r.level = .wandering
         XCTAssertEqual(r.levelRaw, "wandering")
     }
+
+    // MARK: - F10 fallback 修复测试
+
+    /// 无效 levelRaw（任意字符串）应 fallback 为 .wandering，而非 .idle
+    func testInvalidLevelRawFallbackToWandering() throws {
+        let r = AnalysisRecord(
+            frontAppName: "Safari",
+            frontWindowTitles: "Google",
+            level: .fully,
+            fromAI: true,
+            hasChanged: false
+        )
+        r.levelRaw = "invalid_value"
+        XCTAssertEqual(r.level, .wandering, "无效 rawValue 应 fallback 为 .wandering")
+    }
+
+    /// 空字符串 levelRaw 同样应 fallback 为 .wandering
+    func testEmptyLevelRawFallbackToWandering() throws {
+        let r = AnalysisRecord(
+            frontAppName: "Finder",
+            frontWindowTitles: "Downloads",
+            level: .idle,
+            fromAI: false,
+            hasChanged: false
+        )
+        r.levelRaw = ""
+        XCTAssertEqual(r.level, .wandering, "空字符串 rawValue 应 fallback 为 .wandering")
+    }
+
+    /// 所有合法 FocusLevel case 的 rawValue 均能正确解码
+    func testAllValidFocusLevelRawValuesDecodeCorrectly() throws {
+        let r = AnalysisRecord(
+            frontAppName: "Xcode",
+            frontWindowTitles: "Focus.xcodeproj",
+            level: .fully,
+            fromAI: true,
+            hasChanged: false
+        )
+
+        r.levelRaw = "fully"
+        XCTAssertEqual(r.level, .fully)
+
+        r.levelRaw = "wandering"
+        XCTAssertEqual(r.level, .wandering)
+
+        r.levelRaw = "distracted"
+        XCTAssertEqual(r.level, .distracted)
+
+        r.levelRaw = "idle"
+        XCTAssertEqual(r.level, .idle)
+    }
 }

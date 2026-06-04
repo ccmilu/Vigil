@@ -104,7 +104,15 @@ final class AnalysisRecord {
     var analysisLatencyMs: Int
 
     var level: FocusLevel {
-        get { FocusLevel(rawValue: levelRaw) ?? .idle }
+        get {
+            // fallback 用 .wandering 而非 .idle：
+            // .idle 会触发 maybeAlertIdle / stopSoftReminder 等有语义副作用的分支，
+            // 遇到无效 levelRaw（未来新 case / 迁移拼写错误）时应回落到中性状态。
+            guard let parsed = FocusLevel(rawValue: levelRaw) else {
+                return .wandering
+            }
+            return parsed
+        }
         set { levelRaw = newValue.rawValue }
     }
 
