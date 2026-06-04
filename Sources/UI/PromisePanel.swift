@@ -6,6 +6,12 @@ enum PromisePanel {
 
     @MainActor
     static func show(sessionMgr: FocusSessionManager) {
+        // 已有 session 在跑（preparing / running / resting / analyzing）就别开 panel，
+        // 改为激活主窗口让用户看到当前 phase 视图——同一时间只允许一个专注
+        guard sessionMgr.phase.allowsNewSession else {
+            activateMainWindow()
+            return
+        }
         // 不调 NSApp.activate(ignoringOtherApps:)——它会把整个 App 推到前台，
         // 关闭 panel 时被遮住的主窗口会跟着浮上来。
         // 改用 orderFrontRegardless + makeKey，只让 panel 自己浮起并接管键盘。
@@ -43,7 +49,23 @@ enum PromisePanel {
             }
             // 否则正在 fade-out 动画中，忽略本次按键
         } else {
+            // 进行中也别开 panel；show() 内部会再走一次 guard，但快捷键路径
+            // 在这里直接拦截能避免动画闪烁
+            guard sessionMgr.phase.allowsNewSession else {
+                activateMainWindow()
+                return
+            }
             show(sessionMgr: sessionMgr)
+        }
+    }
+
+    /// session 正在跑时，把主窗口拉到前面让用户看到当前 phase 视图
+    @MainActor
+    private static func activateMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        for w in NSApp.windows where w.title == "Focus" {
+            w.makeKeyAndOrderFront(nil)
+            return
         }
     }
 }

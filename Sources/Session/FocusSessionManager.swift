@@ -23,6 +23,15 @@ final class FocusSessionManager: ObservableObject {
         case analyzing
         case completed(sessionID: UUID)
         case failed(String)
+
+        /// 当前阶段是否允许开新 session。preparing / running / resting / analyzing
+        /// 期间禁止再起，避免覆盖在跑的 session 状态。
+        var allowsNewSession: Bool {
+            switch self {
+            case .idle, .completed, .failed: return true
+            case .preparing, .running, .resting, .analyzing: return false
+            }
+        }
     }
 
     @Published private(set) var phase: Phase = .idle
@@ -156,6 +165,14 @@ final class FocusSessionManager: ObservableObject {
 
     @discardableResult
     func start(promise: String, durationSeconds: Int) async -> Result<UUID, Error> {
+        // 防御性 guard：上层入口（PromisePanel）已拦，这里兜底防止并发开 session
+        guard phase.allowsNewSession else {
+            return .failure(NSError(
+                domain: "FocusSession",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "已有专注进行中，无法开新 session"]
+            ))
+        }
         phase = .preparing(promise: promise)
 
         // 建 SwiftData session
