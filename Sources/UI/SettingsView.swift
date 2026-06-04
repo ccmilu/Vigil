@@ -26,6 +26,10 @@ struct SettingsView: View {
             minWidth: 520, idealWidth: 560, maxWidth: 600,
             minHeight: 440, idealHeight: 480, maxHeight: 640
         )
+        // 让所有 tab 内的 ScrollView/Form 顶部留出 tab bar 高度，
+        // 滚动内容物理上不延伸到 tab bar 后面，自然形成 vibrancy 分层。
+        // 不要 .scrollIndicators 推开滚动条——只推开内容。
+        .contentMargins(.top, 12, for: .scrollContent)
     }
 }
 
