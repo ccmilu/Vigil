@@ -18,6 +18,11 @@ struct FocusApp: App {
     @StateObject private var appSettings = AppSettings()
     @StateObject private var sessionMgr: FocusSessionManager
 
+    /// 全局副作用只跑一次。SwiftUI App init 可能因为 environment 变化被多次调用；
+    /// 主窗口关闭重开时 ContentView 的 .task 会重跑——快捷键 / Notifier / StatusBar 注册
+    /// 都不能放在 .task 里，否则 KeyboardShortcuts 会累加回调互相抵消。
+    private nonisolated(unsafe) static var didSetupGlobals = false
+
     init() {
         // 用 shared 单例，避免 @StateObject 在多次 init 中创建临时实例导致
         // serviceFactory 闭包捕获的 store 与 environment 暴露的 store 不一致
@@ -34,6 +39,20 @@ struct FocusApp: App {
         _providerStore = StateObject(wrappedValue: providers)
         _appSettings = StateObject(wrappedValue: settings)
         _sessionMgr = StateObject(wrappedValue: mgr)
+
+        if !Self.didSetupGlobals {
+            Self.didSetupGlobals = true
+            Notifier.setUp()
+            // 注意：StatusBar / 快捷键回调要 @MainActor 派发以访问 sessionMgr
+            DispatchQueue.main.async {
+                StatusBarItem.shared.install(sessionMgr: mgr)
+            }
+            KeyboardShortcuts.onKeyUp(for: .startPromise) {
+                Task { @MainActor in
+                    PromisePanel.toggle(sessionMgr: mgr)
+                }
+            }
+        }
     }
 
     @AppStorage("onboarding.completed") private var onboardingDone = false
@@ -46,15 +65,6 @@ struct FocusApp: App {
                     .environmentObject(providerStore)
                     .environmentObject(appSettings)
                     .frame(minWidth: 560, minHeight: 420)
-                    .task {
-                        Notifier.setUp()
-                        StatusBarItem.shared.install(sessionMgr: sessionMgr)
-                        KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
-                            Task { @MainActor in
-                                PromisePanel.toggle(sessionMgr: sessionMgr)
-                            }
-                        }
-                    }
                 if !onboardingDone {
                     Color.black.opacity(0.001)  // 拦截背后交互
                         .ignoresSafeArea()
