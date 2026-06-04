@@ -26,24 +26,6 @@ struct SettingsView: View {
             minWidth: 520, idealWidth: 560, maxWidth: 600,
             minHeight: 440, idealHeight: 480, maxHeight: 640
         )
-        .modifier(TabBarVibrancyBackground())
-    }
-}
-
-/// 给 tab bar 区域加一层薄薄的 vibrancy 衬底（轻微高斯模糊），
-/// 让滚动内容滚到 tab bar 后面时既能透出又被模糊柔化。
-/// `.bar` 是 SwiftUI 专为 toolbar 设计的薄 material，比 .regularMaterial 通透。
-/// toolbarBackgroundVisibility 是 macOS 15+ API，旧系统降级到只设 toolbarBackground。
-private struct TabBarVibrancyBackground: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 15.0, *) {
-            content
-                .toolbarBackground(.bar, for: .windowToolbar)
-                .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
-        } else {
-            content
-                .toolbarBackground(.bar, for: .windowToolbar)
-        }
     }
 }
 
