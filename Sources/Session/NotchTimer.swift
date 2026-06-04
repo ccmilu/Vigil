@@ -163,7 +163,12 @@ final class NotchTimer: ObservableObject {
             width: islandLocal.width,
             height: islandLocal.height
         )
-        let inside = islandGlobal.contains(mouseGlobal)
+        // hot zone 各边扩展 4pt：
+        // - NSRect.contains 是半开区间 [min, max)，鼠标 y=screen.frame.maxY 时刚好等于
+        //   islandGlobal.maxY 不算命中——屏幕物理顶卡死
+        // - 物理刘海机型上鼠标在刘海区会被 macOS 略微钳制，几像素误差
+        let hotZone = islandGlobal.insetBy(dx: -4, dy: -4)
+        let inside = hotZone.contains(mouseGlobal)
 
         // forceExpand 期间（distract 红色描边 / idle 持续展开）保持接收点击
         let forceExpanded = (forceExpandUntil ?? .distantPast) > Date()
