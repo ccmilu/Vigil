@@ -65,6 +65,19 @@ enum NotchStyle {
     }
 }
 
+// MARK: - 岛尺寸 Single Source
+
+/// 刘海岛的折叠 / 展开几何尺寸。
+///
+/// 由 `NotchTimer.islandGeometry` 统一计算，三处调用方（currentIslandRect /
+/// NotchView / createWindow）都从这里读，不再各自重复 autoDetect 分支逻辑。
+struct IslandGeometry {
+    /// 折叠态尺寸（宽 = 内容驱动；高 = 菜单栏高度）
+    let collapsed: CGSize
+    /// 展开态尺寸（宽 = notchWidth + 两侧扩展；高 = NotchStyle.expandedHeight）
+    let expanded: CGSize
+}
+
 // MARK: - 状态
 
 /// 软提醒级别——distract 之外的两种轻量提示。
@@ -223,30 +236,11 @@ final class NotchTimer: ObservableObject {
         let isSoftAlert = softReminderLevel != .none
         let topInset: CGFloat = (isExpanded && (isStrongAlert || isSoftAlert)) ? NotchStyle.distractedBorderWidth + 1 : 0
 
-        // 岛宽：折叠 / 展开各自的 content-driven 宽度
-        let islandW: CGFloat
-        let islandH: CGFloat
-        if isExpanded {
-            if NotchStyle.autoDetect {
-                islandW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
-            } else {
-                islandW = NotchStyle.manualExpandedWidth
-            }
-            islandH = NotchStyle.expandedHeight
-        } else {
-            if NotchStyle.autoDetect {
-                let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
-                let leftW = NotchStyle.levelIconSize
-                let rightW = NotchStyle.progressRingSize
-                let middle = ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra
-                islandW = sidePad + leftW + middle + rightW + sidePad
-                islandH = ScreenMetrics.menuBarHeight
-            } else {
-                islandW = NotchStyle.manualCollapsedWidth
-                islandH = NotchStyle.manualCollapsedHeight
-            }
-        }
-        let x = (panelSize.width - islandW) / 2
+        // 从单一来源读岛尺寸，不再各算各的
+        let geo = islandGeometry
+        let islandSize = isExpanded ? geo.expanded : geo.collapsed
+
+        let x = (panelSize.width - islandSize.width) / 2
         // SwiftUI VStack 顶端对齐 panel 顶；岛在 panel 顶往下 topInset 起
         // isFlipped=true（NSHostingView 默认）：y=0=顶 → islandY = topInset
         // isFlipped=false（普通 NSView）：y=panelH=顶 → islandY = panelH - topInset - islandH
@@ -254,9 +248,9 @@ final class NotchTimer: ObservableObject {
         if isFlipped {
             y = topInset
         } else {
-            y = panelSize.height - topInset - islandH
+            y = panelSize.height - topInset - islandSize.height
         }
-        return NSRect(x: x, y: y, width: islandW, height: islandH)
+        return NSRect(x: x, y: y, width: islandSize.width, height: islandSize.height)
     }
 
     /// 停止 idle / wandering 软提醒（用户回来动一下 / hover 岛 / level 切换）
@@ -269,15 +263,44 @@ final class NotchTimer: ObservableObject {
         }
     }
 
+    // MARK: - 岛尺寸 Single Source
+
+    /// 折叠 / 展开几何尺寸的单一来源。
+    ///
+    /// currentIslandRect、NotchView 的宽高属性、createWindow 的 panel 初始尺寸
+    /// 都从这里读，保证三处数字完全一致，改参数只需改 NotchStyle 常量一处。
+    var islandGeometry: IslandGeometry {
+        let collapsedW: CGFloat
+        let collapsedH: CGFloat
+        let expandedW: CGFloat
+
+        if NotchStyle.autoDetect {
+            // 折叠态：两侧 padding + 左端 level 图标 + 物理刘海宽 + 右端进度圆环
+            let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
+            collapsedW = sidePad + NotchStyle.levelIconSize
+                       + (ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra)
+                       + NotchStyle.progressRingSize + sidePad
+            // 折叠态高度跟随菜单栏
+            collapsedH = ScreenMetrics.menuBarHeight
+            // 展开态：物理刘海宽 + 两侧各扩展 expandedSideExtension
+            expandedW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
+        } else {
+            collapsedW = NotchStyle.manualCollapsedWidth
+            collapsedH = NotchStyle.manualCollapsedHeight
+            expandedW  = NotchStyle.manualExpandedWidth
+        }
+
+        return IslandGeometry(
+            collapsed: CGSize(width: collapsedW, height: collapsedH),
+            expanded:  CGSize(width: expandedW,  height: NotchStyle.expandedHeight)
+        )
+    }
+
     private func createWindow() {
         guard let screen = NSScreen.main else { return }
         // panel 尺寸用 expanded 上限做窗口大小；岛在内部居中缩放
-        let maxExpandedW: CGFloat
-        if NotchStyle.autoDetect {
-            maxExpandedW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
-        } else {
-            maxExpandedW = NotchStyle.manualExpandedWidth
-        }
+        // 从单一来源读展开态宽度，与 currentIslandRect / NotchView 保持一致
+        let maxExpandedW = islandGeometry.expanded.width
         let panelW = maxExpandedW + 40
         let panelH = NotchStyle.expandedHeight + 8
         let origin = NSPoint(
@@ -341,30 +364,17 @@ struct NotchView: View {
     @State private var now = Date()
     private var hovering: Bool { state.hovering }
 
-    /// 折叠态宽度：内容驱动 — 由实际 left/right 组件 + 刘海中央预留空白决定
-    private var collapsedWidth: CGFloat {
-        if NotchStyle.autoDetect {
-            let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
-            let leftW = NotchStyle.levelIconSize
-            let rightW = NotchStyle.progressRingSize
-            let middle = ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra
-            return sidePad + leftW + middle + rightW + sidePad
-        }
-        return NotchStyle.manualCollapsedWidth
-    }
+    /// 从单一来源读岛尺寸，避免与 currentIslandRect / createWindow 各自重复计算。
+    private var geo: IslandGeometry { state.islandGeometry }
 
-    /// 展开态宽度：autoDetect 时也跟随物理刘海（避免硬编码在小刘海机型上过宽）
-    private var expandedWidth: CGFloat {
-        if NotchStyle.autoDetect {
-            return ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
-        }
-        return NotchStyle.manualExpandedWidth
-    }
+    /// 折叠态宽度
+    private var collapsedWidth: CGFloat { geo.collapsed.width }
 
-    /// 折叠态高度：autoDetect 时跟随菜单栏高度
-    private var collapsedHeight: CGFloat {
-        NotchStyle.autoDetect ? ScreenMetrics.menuBarHeight : NotchStyle.manualCollapsedHeight
-    }
+    /// 展开态宽度
+    private var expandedWidth: CGFloat { geo.expanded.width }
+
+    /// 折叠态高度
+    private var collapsedHeight: CGFloat { geo.collapsed.height }
 
     var body: some View {
         VStack(spacing: 0) {

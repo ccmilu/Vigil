@@ -25,6 +25,11 @@ final class SoundPlayer {
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Sound")
     private let defaults = UserDefaults.standard
 
+    /// 持有上一次播放的 NSSound 实例，以便在下次 play 前调 stop()。
+    /// NSSound(named:) 内部缓存单例，连续 play() 会被忽略，必须先 stop 再 copy 播新实例。
+    /// 暴露给测试：internal(set) 方便 SoundPlayerTests 验证 ivar 是否被正确更新。
+    private(set) var current: NSSound?
+
     var isEnabled: Bool {
         get { defaults.object(forKey: "sound.enabled") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "sound.enabled") }
@@ -37,12 +42,20 @@ final class SoundPlayer {
 
     func play(_ cue: Cue) {
         guard isEnabled else { return }
-        guard let name = soundNames[cue], let sound = NSSound(named: name) else {
-            logger.warning("找不到系统音 \(self.soundNames[cue] ?? "?")")
+        guard let name = soundNames[cue] else {
+            logger.warning("找不到 cue 对应的音名：\(cue.rawValue)")
+            return
+        }
+        // 停掉前一个实例，避免单例缓存导致连续 play 静默
+        current?.stop()
+        // NSSound(named:) 返回缓存单例；copy() 拿到独立实例才能保证本次 play 不被忽略
+        guard let sound = (NSSound(named: name)?.copy() as? NSSound) ?? NSSound(named: name) else {
+            logger.warning("找不到系统音：\(name)")
             return
         }
         sound.volume = volume
         sound.play()
+        current = sound
     }
 
     /// 列出所有可用系统音的名字（给设置页下拉用）

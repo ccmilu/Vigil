@@ -5,6 +5,7 @@ import CoreImage
 import AppKit
 import ImageIO
 import UniformTypeIdentifiers
+import OSLog
 
 /// 抓主屏并按长边 1660 等比缩放、JPEG quality 0.75 写入指定路径。
 /// 通过 ScreenCaptureKit 实现（macOS 14+）。
@@ -125,14 +126,31 @@ final class ScreenCaptureManager {
 // MARK: - 存储路径辅助
 
 enum ScreenshotStore {
+
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Focus", category: "ScreenshotStore")
+
     /// Application Support/Focus/Screenshots/
+    ///
+    /// 降级策略：若 Application Support 目录获取或创建失败（沙盒异常、磁盘只读、权限缺失），
+    /// 自动降级到 `tmp/Focus/Screenshots`，并通过 OSLog 记录警告。
+    /// 降级到 tmp 后截图不会持久化（重启后丢失），但至少不会 fatalError 崩溃。
+    /// v0.2 计划用 Security-Scoped Bookmark 彻底解决写权限问题。
     static var rootDirectory: URL {
-        let base = try! FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        ).appendingPathComponent("Focus/Screenshots", isDirectory: true)
+        let base: URL
+        do {
+            let appSupport = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            base = appSupport.appendingPathComponent("Focus/Screenshots", isDirectory: true)
+        } catch {
+            // Application Support 目录不可用，降级到临时目录
+            logger.warning("无法获取 Application Support 目录，降级到临时目录。error=\(error.localizedDescription)")
+            base = FileManager.default.temporaryDirectory
+                .appendingPathComponent("Focus/Screenshots", isDirectory: true)
+        }
         if !FileManager.default.fileExists(atPath: base.path) {
             try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         }
