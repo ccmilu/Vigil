@@ -1,4 +1,5 @@
 import AppKit
+import SwiftData
 import SwiftUI
 
 enum PromisePanel {
@@ -97,11 +98,14 @@ final class PromisePanelWindow: NSPanel {
         // 标准 fade-in/out 动画，与主窗口 / Settings 一致
         animationBehavior = .documentWindow
 
+        // 注入 modelContainer，使 PromisePanelContent 内的 @Query 能访问 SwiftData 上下文。
+        // NSPanel 不在 WindowGroup 内，需手动注入；使用 AppContainer.shared 单例。
         contentViewController = NSHostingController(
             rootView: PromisePanelContent(sessionMgr: sessionMgr, dismiss: { [weak self] in
                 self?.close()
             })
             .background(.thinMaterial)
+            .modelContainer(AppContainer.shared)
         )
     }
     override func close() {
@@ -141,7 +145,29 @@ private struct PromisePanelContent: View {
     @State private var hasAskedAI = false
     @FocusState private var focused: Bool
 
-    private let presetMinutes = [10, 15, 25, 45, 60]
+    /// 从 SwiftData 读取用户时长预设，按 slot 升序排列。
+    /// 需要 modelContainer 注入到视图树（由 PromisePanelWindow 在 NSHostingController 注入）。
+    /// TODO: 未来在 Settings 加增删改 UI，让用户自定义预设列表（最多 9 个）。
+    @Query(sort: \PlayTimer.slot) private var timers: [PlayTimer]
+
+    /// 当前时长预设（分钟列表）。
+    /// 若 PlayTimer 表非空则从数据库读取（取前 9 个去重），否则回退到默认 5 项。
+    /// TODO: 当预设超过 5 个时，考虑支持 9 个全局快捷键与 PlayTimer 绑定。
+    private var presetMinutes: [Int] {
+        guard !timers.isEmpty else {
+            return Migrations.defaultPresetMinutes
+        }
+        // 将 seconds 转为分钟（整数），去重后最多取 9 个
+        var seen = Set<Int>()
+        var result: [Int] = []
+        for t in timers.prefix(9) {
+            let m = t.seconds / 60
+            if seen.insert(m).inserted {
+                result.append(m)
+            }
+        }
+        return result.isEmpty ? Migrations.defaultPresetMinutes : result
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

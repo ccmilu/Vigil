@@ -17,14 +17,43 @@ enum Migrations {
     /// 柱状图右边出现空白。
     private static let key_ratioRecalcV1 = "migration.ratioRecalc.v1.done"
 
+    /// v2：首次启动时 seed 5 个默认 PlayTimer（10/15/25/45/60 分钟，slot=0-4）。
+    /// 仅当 PlayTimer 表为空时执行，保护用户后续可能的自定义数据。
+    /// TODO: 未来扩展到 9 预设时新增 key_seedDefaultPlayTimersV2，不改 V1 key。
+    private static let key_seedDefaultPlayTimersV1 = "migration.seedDefaultPlayTimers.v1.done"
+
+    /// 默认时长预设（分钟），slot 与数组下标一一对应
+    static let defaultPresetMinutes = [10, 15, 25, 45, 60]
+
     static func runAll(container: ModelContainer) {
         // 一次性数据迁移
         if !UserDefaults.standard.bool(forKey: key_ratioRecalcV1) {
             recalcAllSessionRatios(container: container)
             UserDefaults.standard.set(true, forKey: key_ratioRecalcV1)
         }
+        if !UserDefaults.standard.bool(forKey: key_seedDefaultPlayTimersV1) {
+            seedDefaultPlayTimers(container: container)
+            UserDefaults.standard.set(true, forKey: key_seedDefaultPlayTimersV1)
+        }
         // 每次启动跑：回收上次没正常结束的僵尸 session
         reapStaleSessions(container: container)
+    }
+
+    /// 首次启动时 seed 默认 PlayTimer 预设。
+    /// 幂等：PlayTimer 表非空时直接跳过，避免覆盖用户已有自定义数据。
+    static func seedDefaultPlayTimers(container: ModelContainer) {
+        let ctx = container.mainContext
+        let existing = (try? ctx.fetch(FetchDescriptor<PlayTimer>())) ?? []
+        guard existing.isEmpty else {
+            logger.info("[Migration] PlayTimer 表非空（\(existing.count) 条），跳过 seed")
+            return
+        }
+        for (slot, minutes) in defaultPresetMinutes.enumerated() {
+            let timer = PlayTimer(seconds: minutes * 60, slot: slot)
+            ctx.insert(timer)
+        }
+        try? ctx.save()
+        logger.info("[Migration] seedDefaultPlayTimers：插入 \(defaultPresetMinutes.count) 条默认预设")
     }
 
     /// 上次进程被强杀 / 直接退出时，正在跑的 session 残留 status=.running。
