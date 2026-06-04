@@ -45,7 +45,7 @@ private struct CaptureTab: View {
                         .frame(width: 36, alignment: .trailing)
                         .font(.system(.body, design: .monospaced))
                 }
-                Text("256-bit 下经验值：15~30 微小变化，30~60 明显变化，60+ 大变化。默认 30。")
+                Text(verbatim: "256-bit 下经验值：15~30 微小变化，30~60 明显变化，60+ 大变化。默认 30。")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -117,35 +117,46 @@ private struct SoundTab: View {
     @State private var completeName = SoundPlayer.shared.currentName(for: .complete)
 
     var body: some View {
-        Form {
-            Section("提示音") {
-                Toggle("启用提示音", isOn: $enabled)
-                    .onChange(of: enabled) { _, v in SoundPlayer.shared.isEnabled = v }
-                HStack {
-                    Text("音量").frame(width: 60, alignment: .leading)
-                    Slider(value: $volume, in: 0...1)
-                        .onChange(of: volume) { _, v in SoundPlayer.shared.volume = v }
-                    Text("\(Int(volume * 100))%")
-                        .frame(width: 44, alignment: .trailing)
-                        .font(.system(.body, design: .monospaced))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Section {
+                    Toggle("启用提示音", isOn: $enabled)
+                        .onChange(of: enabled) { _, v in SoundPlayer.shared.isEnabled = v }
+                    HStack {
+                        Text("音量").frame(width: 60, alignment: .leading)
+                        Slider(value: $volume, in: 0...1)
+                            .onChange(of: volume) { _, v in SoundPlayer.shared.volume = v }
+                        Text("\(Int(volume * 100))%")
+                            .frame(width: 44, alignment: .trailing)
+                            .font(.system(.body, design: .monospaced))
+                    }
                 }
+                .padding(12)
+
                 Text("鼠标悬停某个音名即可试听，点击选中")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-            }
 
-            soundPickerSection(title: "开始专注", cue: .start, selected: $startName)
-            soundPickerSection(title: "检测到分心", cue: .distract, selected: $distractName)
-            soundPickerSection(title: "专注完成", cue: .complete, selected: $completeName)
+                soundPickerRow(label: "开始专注", cue: .start, selected: $startName)
+                soundPickerRow(label: "检测到分心", cue: .distract, selected: $distractName)
+                soundPickerRow(label: "专注完成", cue: .complete, selected: $completeName)
+            }
+            .padding(20)
         }
-        .formStyle(.grouped)
     }
 
-    private func soundPickerSection(title: String, cue: SoundPlayer.Cue, selected: Binding<String>) -> some View {
-        Section {
+    private func soundPickerRow(label: String, cue: SoundPlayer.Cue, selected: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(label).font(.callout.weight(.medium))
+                Spacer()
+                Text("当前：\(selected.wrappedValue)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
+            }
             // 横向滚动：两侧渐变 fade 暗示"还有内容"，滚动条独占底部一行
             ScrollView(.horizontal) {
-                // VStack + Spacer 强制把 chip 钉在顶，下方留空给 indicator
+                // VStack + Spacer 强制把 chip 钉在顶，下方留 22pt 给 indicator
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: 6) {
                         ForEach(SoundPlayer.availableSystemSounds, id: \.self) { name in
@@ -176,17 +187,8 @@ private struct SoundTab: View {
                     startPoint: .leading, endPoint: .trailing
                 )
             )
-            .listRowInsets(EdgeInsets())
-        } header: {
-            HStack {
-                Text(title)
-                Spacer()
-                Text("当前：\(selected.wrappedValue)")
-                    .font(.caption2.monospaced())
-                    .foregroundStyle(.secondary)
-                    .textCase(nil)
-            }
         }
+        .padding(12)
     }
 }
 
