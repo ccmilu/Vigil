@@ -54,6 +54,8 @@ final class PromisePanelWindow: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         isMovableByWindowBackground = true
+        // 标准 fade-in/out 动画，匹配 SwiftUI WindowGroup 的过渡感
+        animationBehavior = .utilityWindow
 
         contentViewController = NSHostingController(
             rootView: PromisePanelContent(sessionMgr: sessionMgr, dismiss: { [weak self] in
