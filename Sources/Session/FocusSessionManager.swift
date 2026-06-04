@@ -51,8 +51,15 @@ final class FocusSessionManager: ObservableObject {
     private var distractCooldownUntil: Date?
     /// 上次 distract 时 AI 给的 reminder 文案；持续分心再弹时复用（dhash skip 帧没新文案）
     private var lastDistractReminder: String = ""
+    /// 当前一段连续 distract 已经弹了多少次。跳出 distract 时归零。
+    /// 第 3 次起遮罩多一个"AI 可能误判，本次分心不再提醒"按钮。
+    private var distractAlertCount: Int = 0
+    /// 用户点过"本次分心不再提醒"——保持到跳出 distract 为止。
+    private var distractSuppressedInStreak: Bool = false
     /// 持续分心多久没切回 fully/wandering，就再弹一次提醒
     private static let distractReminderInterval: TimeInterval = 30
+    /// 弹到第几次起显示"本次分心不再提醒"兜底按钮
+    private static let distractSuppressThreshold: Int = 3
 
     private let logger = Logger(subsystem: "com.jason12138.focus", category: "Session")
 
@@ -456,10 +463,16 @@ final class FocusSessionManager: ObservableObject {
         promise: String
     ) async {
         guard level == .distracted else {
+            // 跳出 distract：所有 streak 状态归零，下次进 distract 算"首次"
             distractCooldownUntil = nil
             lastDistractReminder = ""
+            distractAlertCount = 0
+            distractSuppressedInStreak = false
             return
         }
+
+        // 用户在当前 distract 区间按过"AI 误判，不再提醒"——直接静默到跳出 distract
+        if distractSuppressedInStreak { return }
 
         let now = Date()
         let shouldAlert: Bool
@@ -480,16 +493,26 @@ final class FocusSessionManager: ObservableObject {
         } else {
             reminder = lastDistractReminder
         }
+        distractAlertCount += 1
+        let showSuppress = distractAlertCount >= Self.distractSuppressThreshold
+
         // 弹窗期间把 cooldown 推到很远，防止下一个 tick 又触发；
         // onClosed 回调里改成"now + interval"，从关闭瞬间开始计时
         distractCooldownUntil = .distantFuture
         DistractOverlay.shared.onClosed = { [weak self] in
             self?.distractCooldownUntil = Date().addingTimeInterval(Self.distractReminderInterval)
         }
+        DistractOverlay.shared.onSuppress = { [weak self] in
+            self?.distractSuppressedInStreak = true
+        }
 
         await Notifier.notifyDistraction(reminder: reminder)
         SoundPlayer.shared.play(.distract)
         NotchTimer.shared.flashDistracted(reminder: reminder)
-        DistractOverlay.shared.present(reminder: reminder, promise: promise)
+        DistractOverlay.shared.present(
+            reminder: reminder,
+            promise: promise,
+            showSuppress: showSuppress
+        )
     }
 }

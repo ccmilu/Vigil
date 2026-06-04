@@ -16,6 +16,8 @@ final class DistractOverlay {
     /// 外部监听 overlay 真正关闭的回调（点按钮 / 自动关 / 主动 dismiss 都会触发）。
     /// FocusSessionManager 用它把"持续分心 30s 再弹"的计时基准从弹窗瞬间挪到关闭瞬间。
     var onClosed: (() -> Void)?
+    /// "本次分心别再弹"按钮的回调。仅当 present(showSuppress: true) 时显示。
+    var onSuppress: (() -> Void)?
 
     /// 设置开关：用户可以在 Settings 关掉这个体验
     var enabled: Bool {
@@ -25,7 +27,9 @@ final class DistractOverlay {
 
     private init() {}
 
-    func present(reminder: String, promise: String) {
+    /// - showSuppress: 是否显示"本次分心别再弹"按钮（AI 可能误判时给用户兜底，
+    ///   通常仅在同一段 distract 内连续弹到第 3 次时由 SessionManager 传 true）
+    func present(reminder: String, promise: String, showSuppress: Bool = false) {
         guard enabled else { return }
         dismiss()
         guard let screen = NSScreen.main else { return }
@@ -49,7 +53,13 @@ final class DistractOverlay {
             rootView: DistractOverlayView(
                 reminder: reminder,
                 promise: promise,
-                onDismiss: { [weak self] in self?.dismiss() }
+                showSuppress: showSuppress,
+                onDismiss: { [weak self] in self?.dismiss() },
+                onSuppress: { [weak self] in
+                    guard let self else { return }
+                    self.onSuppress?()
+                    self.dismiss()
+                }
             )
         )
         host.view.frame = NSRect(origin: .zero, size: screen.frame.size)
@@ -82,7 +92,9 @@ final class DistractOverlay {
 private struct DistractOverlayView: View {
     let reminder: String
     let promise: String
+    let showSuppress: Bool
     let onDismiss: () -> Void
+    let onSuppress: () -> Void
 
     @State private var appeared = false
 
@@ -123,9 +135,29 @@ private struct DistractOverlayView: View {
                 .buttonStyle(.plain)
                 .keyboardShortcut(.defaultAction)
 
-                Text("点击「我回来了」返回 · 30 秒后自动消失")
+                // 第 3 次起显示：AI 可能误判，本次分心区间内不再打扰
+                if showSuppress {
+                    Button {
+                        onSuppress()
+                    } label: {
+                        Text("AI 可能误判 · 本次分心不再提醒")
+                            .font(.callout)
+                            .foregroundStyle(.white.opacity(0.75))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 8)
+                            .overlay(
+                                Capsule().stroke(.white.opacity(0.25), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Text(showSuppress
+                     ? "持续提醒已 3 次。可点上方按钮静默直到状态恢复 · 30 秒后自动消失"
+                     : "点击「我回来了」返回 · 30 秒后自动消失")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
             }
             .padding(40)
             .frame(maxWidth: 720)
