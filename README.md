@@ -1,4 +1,4 @@
-# Focus
+# Vigil
 
 AI 守护型专注 App（macOS 14+），可接入任意 OpenAI 兼容的 AI 厂商及本地部署的多模态模型。
 
@@ -7,7 +7,7 @@ AI 守护型专注 App（macOS 14+），可接入任意 OpenAI 兼容的 AI 厂�
 ## 一、目录结构
 
 ```
-Focus/
+Vigil/
 ├── App/                        @main 入口、Info.plist、entitlements
 ├── Sources/
 │   ├── AI/                     AI 服务抽象与实现
@@ -15,11 +15,11 @@ Focus/
 │   ├── UI/                     SwiftUI 视图、面板、ViewModel
 │   └── Config/                 Demo 阶段硬编码配置
 ├── Resources/                  Assets.xcassets 等资源
-├── Tests/FocusTests/           单元测试 + 集成测试
+├── Tests/FocusTests/           单元测试 + 集成测试（target 名为 VigilTests）
 ├── docs/                       PRD、prompt 模板
 ├── scripts/                    一键脚本（生成 / 构建 / 测试 / 运行）
 ├── Project.yml                 XcodeGen 项目描述
-└── Focus.xcodeproj             由 xcodegen 生成（已 .gitignore）
+└── Vigil.xcodeproj             由 xcodegen 生成（已 .gitignore）
 ```
 
 ## 二、首次启动
@@ -28,11 +28,11 @@ Focus/
 # 1. 装 xcodegen（一次性）
 brew install xcodegen
 
-# 2. 生成 Focus.xcodeproj
+# 2. 生成 Vigil.xcodeproj
 ./scripts/generate.sh
 
 # 3. 用 Xcode 打开
-open Focus.xcodeproj
+open Vigil.xcodeproj
 ```
 
 之后日常开发用 Xcode 即可。改了 `Project.yml` 或新增 / 移动文件后再跑 `./scripts/generate.sh`。

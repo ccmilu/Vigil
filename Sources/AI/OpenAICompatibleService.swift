@@ -232,7 +232,7 @@ struct OpenAICompatibleService: AIService {
         let json = extractFirstJSONObject(from: raw) ?? raw
         guard let data = json.data(using: .utf8) else {
             throw AIServiceError.decodingFailed(
-                underlying: NSError(domain: "Focus", code: -1),
+                underlying: NSError(domain: "Vigil", code: -1),
                 raw: raw
             )
         }

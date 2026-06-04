@@ -52,7 +52,7 @@ struct OnboardingView: View {
             Image(systemName: "target")
                 .font(.system(size: 72))
                 .foregroundStyle(.blue)
-            Text("欢迎使用 Focus")
+            Text("欢迎使用 Vigil")
                 .font(.system(size: 32, weight: .bold))
             Text("用一句承诺约束自己，AI 看屏判断你是否真在做。\n本地 / 任意 OpenAI 兼容 AI 都能接入。")
                 .multilineTextAlignment(.center)
@@ -66,7 +66,7 @@ struct OnboardingView: View {
         permissionPage(
             icon: "rectangle.dashed.badge.record",
             title: "屏幕录制权限",
-            description: "Focus 需要定时截屏给 AI 分析，判断你是否在做承诺的事。截图本地保存，仅按你选择的服务发出。",
+            description: "Vigil 需要定时截屏给 AI 分析，判断你是否在做承诺的事。截图本地保存，仅按你选择的服务发出。",
             granted: screenRecordingGranted,
             actionTitle: "打开系统设置",
             action: {
@@ -87,8 +87,8 @@ struct OnboardingView: View {
             icon: "bell.badge",
             title: "通知权限",
             description: notificationStatus == .denied
-                ? "之前选过「不允许」。系统不会再弹原生授权框，请到系统设置 → 通知 → Focus 手动开启。"
-                : "走神时 Focus 会用通知 + 提示音把你拉回。首次会弹原生授权框。",
+                ? "之前选过「不允许」。系统不会再弹原生授权框，请到系统设置 → 通知 → Vigil 手动开启。"
+                : "走神时 Vigil 会用通知 + 提示音把你拉回。首次会弹原生授权框。",
             granted: notificationGranted,
             actionTitle: notificationStatus == .denied ? "打开系统设置" : "请求授权",
             action: {

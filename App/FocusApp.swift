@@ -59,7 +59,7 @@ struct FocusApp: App {
     @AppStorage("onboarding.completed") private var onboardingDone = false
 
     var body: some Scene {
-        WindowGroup("Focus") {
+        WindowGroup("Vigil") {
             ZStack {
                 ContentView()
                     .environmentObject(sessionMgr)

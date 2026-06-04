@@ -10,7 +10,7 @@ import SwiftData
 @MainActor
 enum Migrations {
 
-    private static let logger = Logger(subsystem: "com.milu.Focus", category: "Migrations")
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Vigil", category: "Migrations")
 
     /// v1：把所有历史 session 的 4 个 ratio 用新公式（分母 = records 数 × 5s）重算。
     /// 旧公式分母用 actualDuration，导致 .skippedNoWindows 等不入库的 tick 让总和 < 100%，

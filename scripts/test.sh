@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [ ! -d "Focus.xcodeproj" ]; then
+if [ ! -d "Vigil.xcodeproj" ]; then
   ./scripts/generate.sh
 fi
 
@@ -17,8 +17,8 @@ fi
 
 # shellcheck disable=SC2086
 env $ENV_PREFIX xcodebuild \
-  -project Focus.xcodeproj \
-  -scheme Focus \
+  -project Vigil.xcodeproj \
+  -scheme Vigil \
   -destination 'platform=macOS' \
   test \
   | xcbeautify 2>/dev/null || cat

@@ -40,7 +40,7 @@ enum Notifier {
 
     static func notifyDistraction(reminder: String) async {
         let content = UNMutableNotificationContent()
-        content.title = "Focus · 拉你回来一下"
+        content.title = "Vigil · 拉你回来一下"
         content.body = reminder.isEmpty ? "似乎偏离了承诺，看看回到正事？" : reminder
         content.sound = .default
         content.interruptionLevel = .timeSensitive

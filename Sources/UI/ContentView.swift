@@ -51,7 +51,7 @@ struct ContentView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Focus")
+            Text("Vigil")
                 .font(.system(size: 28, weight: .bold))
             Text(shortcutHint)
                 .font(.callout)

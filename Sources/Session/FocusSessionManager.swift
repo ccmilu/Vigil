@@ -352,7 +352,7 @@ final class FocusSessionManager: ObservableObject {
     /// 视觉很糟糕，所以只 makeKey 第一个、其余 orderOut。
     private func surfaceMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        let focusWindows = NSApp.windows.filter { $0.title == "Focus" }
+        let focusWindows = NSApp.windows.filter { $0.title == "Vigil" }
         guard let target = focusWindows.first else { return }
         for w in focusWindows where w !== target {
             w.orderOut(nil)

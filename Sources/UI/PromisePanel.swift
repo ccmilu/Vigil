@@ -19,7 +19,7 @@ enum PromisePanel {
         // 2) 原本在前台的其他 App——关闭 panel 后让它重新 activate，
         //    实现 Spotlight 那种"用完即走"、不抢前台的体感。
         let hiddenMainsBeforeActivate = NSApp.windows.filter {
-            $0.title == "Focus" && !$0.isVisible
+            $0.title == "Vigil" && !$0.isVisible
         }
         let prevFrontApp = NSWorkspace.shared.frontmostApplication
 

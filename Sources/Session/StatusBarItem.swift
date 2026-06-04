@@ -24,7 +24,7 @@ final class StatusBarItem {
             let img = NSImage(named: "MenubarIcon")
             img?.isTemplate = true  // 系统自动反色：浅模式黑、深模式白
             button.image = img
-            button.toolTip = "Focus · 点击开始一次专注"
+            button.toolTip = "Vigil · 点击开始一次专注"
             button.target = self
             button.action = #selector(handleClick(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -48,7 +48,7 @@ final class StatusBarItem {
 
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        let focusWindows = NSApp.windows.filter { $0.title == "Focus" }
+        let focusWindows = NSApp.windows.filter { $0.title == "Vigil" }
         guard let target = focusWindows.first else { return }
         // hideOnClose 让旧窗口残留 + SwiftUI 仍会按需创建新实例，可能累积多个；
         // 只保留第一个为主窗口，其余统一 orderOut 防止"一点击冒 5 个窗口"
@@ -65,7 +65,7 @@ final class StatusBarItem {
         menu.addItem(withTitle: "显示主窗口", action: #selector(menuShowMain), keyEquivalent: "")
             .target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "退出 Focus", action: #selector(menuQuit), keyEquivalent: "q")
+        menu.addItem(withTitle: "退出 Vigil", action: #selector(menuQuit), keyEquivalent: "q")
             .target = self
         item?.menu = menu
         item?.button?.performClick(nil)

@@ -487,7 +487,7 @@ struct NotchView: View {
         }
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
-            for w in NSApp.windows where w.title == "Focus" {
+            for w in NSApp.windows where w.title == "Vigil" {
                 w.makeKeyAndOrderFront(nil)
             }
         }
@@ -893,7 +893,7 @@ struct ProgressRing: View {
     state.remaining = 1234
     state.planned = 1500
     state.level = .fully
-    state.promise = "完成 Focus 项目刘海调优"
+    state.promise = "完成 Vigil 项目刘海调优"
     state.reasoning = "正在 Xcode 编辑 NotchTimer.swift 的圆环组件"
     return NotchView(state: state)
         .background(Color.blue.opacity(0.2))
@@ -904,7 +904,7 @@ struct ProgressRing: View {
     state.remaining = 600
     state.planned = 1500
     state.level = .distracted
-    state.promise = "完成 Focus 项目"
+    state.promise = "完成 Vigil 项目"
     state.reasoning = "正在浏览 YouTube 推荐视频"
     state.reminder = "刚才在刷 YouTube；回到调试圆环吧"
     state.forceExpandUntil = Date().addingTimeInterval(60)

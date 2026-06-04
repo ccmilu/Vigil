@@ -407,7 +407,7 @@ private struct DebugTab: View {
                 } label: {
                     Label("重新查看引导流程", systemImage: "arrow.counterclockwise")
                 }
-                Text("点击后关闭 Focus 主窗口再重新打开（Cmd+W → Dock 点击图标），引导流程会再次出现。")
+                Text("点击后关闭 Vigil 主窗口再重新打开（Cmd+W → Dock 点击图标），引导流程会再次出现。")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -416,7 +416,7 @@ private struct DebugTab: View {
         .alert("已重置引导", isPresented: $showRestartAlert) {
             Button("好") {}
         } message: {
-            Text("关闭主窗口（Cmd+W）→ 从 Dock 重新点击 Focus 图标，引导会再次出现。")
+            Text("关闭主窗口（Cmd+W）→ 从 Dock 重新点击 Vigil 图标，引导会再次出现。")
         }
     }
 }

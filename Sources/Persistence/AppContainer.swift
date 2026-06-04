@@ -12,7 +12,7 @@ enum AppContainer {
             PlayTimer.self
         ])
         let config = ModelConfiguration(
-            "Focus",
+            "Vigil",
             schema: schema,
             isStoredInMemoryOnly: false,
             allowsSave: true,
@@ -34,7 +34,7 @@ enum AppContainer {
             PlayTimer.self
         ])
         let config = ModelConfiguration(
-            "FocusTest",
+            "VigilTest",
             schema: schema,
             isStoredInMemoryOnly: true
         )
