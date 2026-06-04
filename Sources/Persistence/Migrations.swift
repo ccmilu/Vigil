@@ -55,10 +55,7 @@ enum Migrations {
             } else {
                 // wall-clock 为负（时钟回拨）或超出合理范围（App 长时间 suspend 后被回收）
                 s.actualDuration = Int(recordsBased)
-                logger.warning(
-                    "[Reaper] session \(s.id) wall-clock diff \(wallClock)s 不合理，" +
-                    "降级使用 records×5 估算：\(Int(recordsBased))s"
-                )
+                logger.warning("[Reaper] session \(s.id) wall-clock diff \(wallClock)s 不合理，降级使用 records×5 估算：\(Int(recordsBased))s")
             }
             s.status = .abandoned
             s.stopReason = "未正常结束（App 退出 / 强杀）"
