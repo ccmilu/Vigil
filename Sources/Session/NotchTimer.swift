@@ -95,6 +95,9 @@ final class NotchTimer: ObservableObject {
     @Published var hovering: Bool = false
 
     private var window: NSPanel?
+    private var mouseLocalMonitor: Any?
+    private var mouseGlobalMonitor: Any?
+    private var hoverPollTimer: Timer?
 
     private init() {}
 
@@ -109,6 +112,65 @@ final class NotchTimer: ObservableObject {
         window?.orderOut(nil)
         window = nil
         forceExpandUntil = nil
+        stopMouseTracking()
+    }
+
+    private func stopMouseTracking() {
+        if let m = mouseLocalMonitor { NSEvent.removeMonitor(m); mouseLocalMonitor = nil }
+        if let m = mouseGlobalMonitor { NSEvent.removeMonitor(m); mouseGlobalMonitor = nil }
+        hoverPollTimer?.invalidate()
+        hoverPollTimer = nil
+    }
+
+    /// 用全局鼠标位置驱动 panel.ignoresMouseEvents：
+    /// - 鼠标进入岛实际矩形 → panel 接收事件 + state.hovering=true（SwiftUI 展开）
+    /// - 鼠标离开 → panel.ignoresMouseEvents=true 全穿透，下方应用能点击
+    /// - forceExpandUntil 期间永远保持接收（不让用户错过软提醒）
+    fileprivate func startMouseTracking() {
+        let handler: (NSEvent?) -> Void = { [weak self] _ in
+            self?.refreshHoverState()
+        }
+        // Local: 鼠标在本 App 上（panel 接收事件时）
+        mouseLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown]) { event in
+            handler(event); return event
+        }
+        // Global: 鼠标在其他 App 上（panel ignoresMouseEvents=true 期间穿透时）
+        mouseGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown]) { event in
+            handler(event)
+        }
+        // 兜底轮询：global monitor 偶尔不触发（系统进入低能耗 / 监听器丢失），
+        // 100ms 一次主动 refresh 保证状态准确
+        hoverPollTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshHoverState() }
+        }
+    }
+
+    private func refreshHoverState() {
+        guard let panel = window else { return }
+        let mouseGlobal = NSEvent.mouseLocation
+        let panelFrame = panel.frame
+
+        // currentIslandRect 返回 panel-local (isFlipped=false 时 y 向上)
+        let islandLocal = currentIslandRect(in: panelFrame.size, isFlipped: false)
+        // 转全局 (NSScreen) 坐标
+        let islandGlobal = NSRect(
+            x: panelFrame.origin.x + islandLocal.minX,
+            y: panelFrame.origin.y + islandLocal.minY,
+            width: islandLocal.width,
+            height: islandLocal.height
+        )
+        let inside = islandGlobal.contains(mouseGlobal)
+
+        // forceExpand 期间（distract 红色描边 / idle 持续展开）保持接收点击
+        let forceExpanded = (forceExpandUntil ?? .distantPast) > Date()
+
+        let shouldReceive = inside || forceExpanded
+        if panel.ignoresMouseEvents != !shouldReceive {
+            panel.ignoresMouseEvents = !shouldReceive
+        }
+        if hovering != inside {
+            hovering = inside
+        }
     }
 
     func update(remaining: TimeInterval, level: FocusLevel?) {
@@ -140,10 +202,12 @@ final class NotchTimer: ObservableObject {
         self.forceExpandUntil = .distantFuture
     }
 
-    /// 当前岛实际矩形（panel 内坐标，SwiftUI 习惯：y 向下，0=顶）。
+    /// 当前岛实际矩形。
+    /// - panelSize: NSHostingView.bounds.size
+    /// - isFlipped: NSHostingView.isFlipped — true 时 y=0 是顶，false 时 y=0 是底
     /// PassthroughHostingView.hitTest 用这个判断鼠标点是否在岛上，
     /// 岛外区域返回 nil 让点击穿透到下方应用。
-    func currentIslandRect(in panelSize: NSSize) -> NSRect {
+    func currentIslandRect(in panelSize: NSSize, isFlipped: Bool = true) -> NSRect {
         let isExpanded = hovering || (forceExpandUntil.map { $0 > Date() } ?? false)
         // 软/强提醒展开态会下移 NotchStyle.distractedBorderWidth+1，对应 SwiftUI VStack 的 padding.top
         let isStrongAlert = level == .distracted
@@ -174,7 +238,15 @@ final class NotchTimer: ObservableObject {
             }
         }
         let x = (panelSize.width - islandW) / 2
-        let y = topInset
+        // SwiftUI VStack 顶端对齐 panel 顶；岛在 panel 顶往下 topInset 起
+        // isFlipped=true（NSHostingView 默认）：y=0=顶 → islandY = topInset
+        // isFlipped=false（普通 NSView）：y=panelH=顶 → islandY = panelH - topInset - islandH
+        let y: CGFloat
+        if isFlipped {
+            y = topInset
+        } else {
+            y = panelSize.height - topInset - islandH
+        }
         return NSRect(x: x, y: y, width: islandW, height: islandH)
     }
 
@@ -214,7 +286,10 @@ final class NotchTimer: ObservableObject {
         panel.level = NSWindow.Level(Int(CGWindowLevelForKey(.statusWindow)))
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         panel.acceptsMouseMovedEvents = true
-        panel.ignoresMouseEvents = false
+        // 默认全穿透——下方应用的点击不被拦截
+        // 通过 startMouseTracking() 的 NSEvent 全局监听动态切换：
+        // 鼠标进入岛矩形时 ignoresMouseEvents=false 才接收点击/hover
+        panel.ignoresMouseEvents = true
         panel.isMovable = false
         // 用透明 hit-test 的 NSHostingView 而不是默认的 NSHostingController：
         // NSHostingView 默认 hitTest 在空白区域返回 self（NSPanel 整块吃事件），
@@ -225,6 +300,7 @@ final class NotchTimer: ObservableObject {
         host.autoresizingMask = [.width, .height]
         panel.contentView = host
         window = panel
+        startMouseTracking()
     }
 }
 
@@ -237,11 +313,14 @@ private final class FloatingNotchPanel: NSPanel {
 /// 岛之外的整块 panel 区域返回 nil，事件穿透到下方应用。
 /// SwiftUI 默认会让 panel 整个 frame 接收 hit-test（即使透明），所以必须在
 /// NSView 层主动拦截，不能只靠 SwiftUI 自己的 hit-test 推断。
+/// hitTest 兜底：panel.ignoresMouseEvents 已经控制了"事件是否进入 panel"的整体行为，
+/// 这里再加一层 view-local 过滤——避免极端情况下（global monitor 来不及更新）
+/// 点击穿过岛旁边的透明区域命中 self
 private final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
     override func hitTest(_ point: NSPoint) -> NSView? {
-        // NSHostingView isFlipped=true，point.y=0 是 view 顶；和 NotchView 内 VStack 顶对齐
-        let islandRect = NotchTimer.shared.currentIslandRect(in: bounds.size)
-        guard islandRect.contains(point) else { return nil }
+        let local = convert(point, from: superview)
+        let islandRect = NotchTimer.shared.currentIslandRect(in: bounds.size, isFlipped: isFlipped)
+        guard islandRect.contains(local) else { return nil }
         return super.hitTest(point)
     }
 }
