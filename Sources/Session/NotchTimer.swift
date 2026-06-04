@@ -150,16 +150,17 @@ final class NotchTimer: ObservableObject {
         let mouseGlobal = NSEvent.mouseLocation
         let panelFrame = panel.frame
 
-        // currentIslandRect 返回 panel-local (isFlipped=false 时 y 向上)
-        let islandLocal = currentIslandRect(in: panelFrame.size, isFlipped: false)
-        // 转全局 (NSScreen) 坐标
-        let islandGlobal = NSRect(
-            x: panelFrame.origin.x + islandLocal.minX,
-            y: panelFrame.origin.y + islandLocal.minY,
-            width: islandLocal.width,
-            height: islandLocal.height
+        // hover 检测区是"双区"设计，避免快速移入到折叠岛之外但视觉岛之内时不响应：
+        // - 已展开（hovering=true）→ 用 expanded 矩形作为"保持区"（鼠标在大区域内都保持展开）
+        // - 未展开（hovering=false）→ 用 collapsed 矩形 + padding 作为"触发区"（稍微靠近就触发展开）
+        let detectLocal = hoverDetectionRect(in: panelFrame.size, isFlipped: false)
+        let detectGlobal = NSRect(
+            x: panelFrame.origin.x + detectLocal.minX,
+            y: panelFrame.origin.y + detectLocal.minY,
+            width: detectLocal.width,
+            height: detectLocal.height
         )
-        let inside = islandGlobal.contains(mouseGlobal)
+        let inside = detectGlobal.contains(mouseGlobal)
 
         // forceExpand 期间（distract 红色描边 / idle 持续展开）保持接收点击
         let forceExpanded = (forceExpandUntil ?? .distantPast) > Date()
@@ -171,6 +172,52 @@ final class NotchTimer: ObservableObject {
         if hovering != inside {
             hovering = inside
         }
+    }
+
+    /// hover 检测专用矩形。和 currentIslandRect 区分：
+    /// - currentIslandRect 给 hitTest 做精确点击过滤
+    /// - hoverDetectionRect 给 NSEvent 监听做"触发/保持展开"判定，更宽容
+    private func hoverDetectionRect(in panelSize: NSSize, isFlipped: Bool) -> NSRect {
+        let isCurrentlyExpanded = hovering || (forceExpandUntil ?? .distantPast) > Date()
+        let islandW: CGFloat
+        let islandH: CGFloat
+        let padX: CGFloat
+        let padY: CGFloat
+        if isCurrentlyExpanded {
+            // 展开态：保持区 = 真正的 expanded 矩形（无 padding，离开就折叠）
+            if NotchStyle.autoDetect {
+                islandW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
+            } else {
+                islandW = NotchStyle.manualExpandedWidth
+            }
+            islandH = NotchStyle.expandedHeight
+            padX = 0
+            padY = 0
+        } else {
+            // 折叠态：触发区 = 折叠岛 + 左右 30pt + 下方 24pt（上方是物理刘海/菜单栏边界，不加）
+            if NotchStyle.autoDetect {
+                let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
+                let leftW = NotchStyle.levelIconSize
+                let rightW = NotchStyle.progressRingSize
+                let middle = ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra
+                islandW = sidePad + leftW + middle + rightW + sidePad
+                islandH = ScreenMetrics.menuBarHeight
+            } else {
+                islandW = NotchStyle.manualCollapsedWidth
+                islandH = NotchStyle.manualCollapsedHeight
+            }
+            padX = 30
+            padY = 24
+        }
+        let x = (panelSize.width - islandW) / 2 - padX
+        // 折叠态在岛下方加 padY；展开态不加（实际 expanded 矩形已经够大）
+        let y: CGFloat
+        if isFlipped {
+            y = 0  // 顶贴
+        } else {
+            y = panelSize.height - islandH - padY
+        }
+        return NSRect(x: x, y: y, width: islandW + 2 * padX, height: islandH + padY)
     }
 
     func update(remaining: TimeInterval, level: FocusLevel?) {
