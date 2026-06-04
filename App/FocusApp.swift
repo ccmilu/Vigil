@@ -45,6 +45,7 @@ struct FocusApp: App {
             Notifier.setUp()
             // 注意：StatusBar / 快捷键回调要 @MainActor 派发以访问 sessionMgr
             DispatchQueue.main.async {
+                Migrations.runAll(container: AppContainer.shared)
                 StatusBarItem.shared.install(sessionMgr: mgr)
             }
             KeyboardShortcuts.onKeyUp(for: .startPromise) {
