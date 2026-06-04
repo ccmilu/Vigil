@@ -32,7 +32,7 @@ struct SettingsView: View {
         // Settings 下面没桌面所以显示成白底。这里手写 NSVisualEffectView 走 withinWindow。
         // tab bar 是 NSToolbar 在 AppKit 更上层，overlay 不会盖住它。
         .overlay(alignment: .top) {
-            VisualEffectBlur(material: .menu, blendingMode: .withinWindow)
+            VisualEffectBlur(material: .hudWindow, blendingMode: .withinWindow)
                 .frame(height: 88)
                 .ignoresSafeArea(edges: .top)
                 .allowsHitTesting(false)
