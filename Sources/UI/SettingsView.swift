@@ -29,6 +29,15 @@ struct SettingsView: View {
     }
 }
 
+extension View {
+    /// 给 Settings 的 tab 内部 Form / ScrollView 加 top content margin，
+    /// 让滚动内容不会延伸到 tab bar 后面。tab bar 高度约 70-80pt。
+    /// 调这一个数字就能整体改所有 tab 的留白。
+    func settingsTabTopInset() -> some View {
+        self.contentMargins(.top, 8, for: .scrollContent)
+    }
+}
+
 private struct AlertsTab: View {
     @ObservedObject var settings: AppSettings
 
@@ -132,6 +141,7 @@ private struct AlertsTab: View {
         }
         .formStyle(.grouped)
         .padding(.bottom, 8)
+        .settingsTabTopInset()
     }
 }
 
@@ -214,6 +224,7 @@ private struct CaptureTab: View {
         }
         .formStyle(.grouped)
         .padding(.bottom, 8)
+        .settingsTabTopInset()
     }
 }
 
@@ -251,6 +262,7 @@ private struct SoundTab: View {
             }
             .padding(20)
         }
+        .settingsTabTopInset()
     }
 
     private func soundPickerRow(label: String, cue: SoundPlayer.Cue, selected: Binding<String>) -> some View {
@@ -364,6 +376,7 @@ private struct DebugTab: View {
             }
         }
         .formStyle(.grouped)
+        .settingsTabTopInset()
         .alert("已重置引导", isPresented: $showRestartAlert) {
             Button("好") {}
         } message: {
