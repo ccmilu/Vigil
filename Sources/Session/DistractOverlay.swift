@@ -4,8 +4,8 @@ import SwiftUI
 /// 分心时全屏覆盖一层半透明黑色，居中显示 AI 的 reminder 文字 + "返回工作"按钮。
 ///
 /// 行为：
-/// - distracted 跳变时调 present()；自动 8 秒后渐隐
-/// - 点击/按 ESC 提前关闭
+/// - distracted 跳变时调 present()；自动 30 秒后渐隐
+/// - 只能通过"我回来了"按钮主动关闭（ESC、空白处不行）—— 强化"必须确认"的仪式感
 /// - 不强占焦点（用户仍可操作其它 App，但视觉上无法忽略）
 @MainActor
 final class DistractOverlay {
@@ -58,7 +58,7 @@ final class DistractOverlay {
 
         autoCloseTask?.cancel()
         autoCloseTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 8 * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: 30 * 1_000_000_000)
             if !Task.isCancelled {
                 await MainActor.run { self?.dismiss() }
             }
@@ -83,8 +83,8 @@ private struct DistractOverlayView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.65)
-                .onTapGesture { onDismiss() }
+            // 底层稍微透出桌面，给玻璃下方留点可被折射的内容
+            Color.black.opacity(0.55)
 
             VStack(spacing: 20) {
                 Image(systemName: "exclamationmark.bubble.fill")
@@ -93,70 +93,50 @@ private struct DistractOverlayView: View {
 
                 Text("回来一下")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(.white)
 
                 Text("当前承诺：\(promise)")
                     .font(.callout)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
 
                 Text(reminder.isEmpty ? "似乎偏离了承诺。回到正事？" : reminder)
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 60)
-                    .padding(.vertical, 14)
-                    .frame(maxWidth: 720)
-                    .background(Color.white.opacity(0.08), in: .rect(cornerRadius: 12))
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: 640)
 
                 Button {
                     onDismiss()
                 } label: {
                     Text("我回来了")
-                        .font(.title3.weight(.medium))
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 32)
                         .padding(.vertical, 12)
-                        .background(.white, in: .capsule)
+                        .background(.orange, in: .capsule)
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.defaultAction)
 
-                Text("8 秒后自动消失 · 点空白也可关闭")
+                Text("点击「我回来了」返回 · 30 秒后自动消失")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.tertiary)
             }
             .padding(40)
+            .frame(maxWidth: 720)
+            .liquidGlass(
+                in: .rect(cornerRadius: 28),
+                tint: .orange.opacity(0.08),
+                intensity: .prominent
+            )
             .scaleEffect(appeared ? 1 : 0.95)
             .opacity(appeared ? 1 : 0)
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: appeared)
         }
+        // 让玻璃浮卡内 .primary / .secondary 自动变亮色，避免在暗底上看不清；
+        // 比手写 .white.opacity(...) 更符合 HIG 的"语义颜色 + 系统适应"
+        .preferredColorScheme(.dark)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { appeared = true }
-        .background(EscKeyHandler { onDismiss() })
-    }
-}
-
-/// 监听 ESC 键的隐藏组件
-private struct EscKeyHandler: NSViewRepresentable {
-    let onEsc: () -> Void
-
-    func makeNSView(context: Context) -> NSView {
-        let v = EscView()
-        v.onEsc = onEsc
-        DispatchQueue.main.async { v.window?.makeFirstResponder(v) }
-        return v
-    }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    private final class EscView: NSView {
-        var onEsc: (() -> Void)?
-        override var acceptsFirstResponder: Bool { true }
-        override func keyDown(with event: NSEvent) {
-            if event.keyCode == 53 {  // ESC
-                onEsc?()
-            } else {
-                super.keyDown(with: event)
-            }
-        }
     }
 }
