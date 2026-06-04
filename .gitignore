@@ -21,6 +21,7 @@ Package.resolved
 .AppleDouble
 .LSOverride
 Icon?
+!icons/
 ._*
 
 # 临时/本地
