@@ -21,6 +21,16 @@ enum PromisePanel {
         }
         win.makeKeyAndOrderFront(nil)
     }
+
+    /// 快捷键专用：已打开则关闭，未打开则打开。
+    @MainActor
+    static func toggle(sessionMgr: FocusSessionManager) {
+        if let existing = PromisePanelWindow.shared {
+            existing.close()
+        } else {
+            show(sessionMgr: sessionMgr)
+        }
+    }
 }
 
 final class PromisePanelWindow: NSPanel {

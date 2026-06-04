@@ -50,7 +50,7 @@ struct FocusApp: App {
                         Notifier.setUp()
                         KeyboardShortcuts.onKeyUp(for: .startPromise) { [sessionMgr] in
                             Task { @MainActor in
-                                PromisePanel.show(sessionMgr: sessionMgr)
+                                PromisePanel.toggle(sessionMgr: sessionMgr)
                             }
                         }
                     }
