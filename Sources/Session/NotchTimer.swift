@@ -124,7 +124,7 @@ final class NotchTimer: ObservableObject {
         let panelH = NotchStyle.expandedHeight + 8
         let origin = NSPoint(
             x: screen.frame.midX - panelW / 2,
-            y: screen.frame.maxY - panelH  // 顶贴菜单栏
+            y: screen.frame.maxY - panelH  // 顶贴菜单栏（仅折叠态贴顶；展开态由 VStack padding 下移）
         )
         let panel = FloatingNotchPanel(
             contentRect: NSRect(origin: origin, size: NSSize(width: panelW, height: panelH)),
@@ -188,6 +188,9 @@ struct NotchView: View {
                     width: isExpanded ? expandedWidth : collapsedWidth,
                     height: isExpanded ? NotchStyle.expandedHeight : collapsedHeight
                 )
+                // 仅 distract 展开态下移：红色描边较粗（2pt），center-aligned 上半部分
+                // 贴屏幕顶会被截掉，反向圆角看不到。其他状态描边细（0.5pt）不需要补偿。
+                .padding(.top, (isExpanded && isDistracted) ? NotchStyle.distractedBorderWidth + 1 : 0)
                 .animation(
                     .spring(response: NotchStyle.springResponse, dampingFraction: NotchStyle.springDamping),
                     value: isExpanded
@@ -211,24 +214,31 @@ struct NotchView: View {
     /// 岛本体 — 反向圆角形状 + 描边 + 内容，共享同一 shape 保证缩放同步
     private var island: some View {
         ZStack {
-            shape
-                .fill(.black)
-                // distracted 时画底部 U 形红色描边（顶部贴菜单栏，故意不画）；
-                // 非 distracted 时画淡灰底色描边（也只画底部，保持视觉一致）
-                .overlay(
-                    NotchBottomBorder(
-                        topCornerRadius: NotchStyle.topCornerRadius,
-                        bottomCornerRadius: NotchStyle.bottomCornerRadius
-                    )
-                    .stroke(
-                        isDistracted ? NotchStyle.distractedBorderColor : Color.white.opacity(0.08),
-                        lineWidth: isDistracted ? NotchStyle.distractedBorderWidth : 0.5
-                    )
-                )
+            shape.fill(.black)
             content
         }
         .clipShape(shape)
-        .onHover { hovering = $0 }
+        // 描边放在 clipShape 之后：center-aligned stroke 在 concave 顶角处
+        // 朝外那半像素本来会被 clipShape 裁掉（看起来上圆角"没了"），
+        // 放到外层 overlay 后整条 U 形线包括两个反向圆角都能完整显示
+        .overlay(
+            NotchBottomBorder(
+                topCornerRadius: NotchStyle.topCornerRadius,
+                bottomCornerRadius: NotchStyle.bottomCornerRadius
+            )
+            .stroke(
+                isDistracted ? NotchStyle.distractedBorderColor : Color.white.opacity(0.08),
+                lineWidth: isDistracted ? NotchStyle.distractedBorderWidth : 0.5
+            )
+        )
+        .onHover { isHovering in
+            hovering = isHovering
+            // 用户 hover 到岛 = 已经"看到提醒"，立刻清掉强制展开，
+            // 鼠标移开后岛能正常折叠，不再被 forceExpandUntil 卡住
+            if isHovering, state.forceExpandUntil != nil {
+                state.forceExpandUntil = nil
+            }
+        }
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
             for w in NSApp.windows where w.title == "Focus" {
