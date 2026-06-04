@@ -26,10 +26,37 @@ struct SettingsView: View {
             minWidth: 520, idealWidth: 560, maxWidth: 600,
             minHeight: 440, idealHeight: 480, maxHeight: 640
         )
-        // 让所有 tab 内的 ScrollView/Form 顶部留出 tab bar 高度，
-        // 滚动内容物理上不延伸到 tab bar 后面，自然形成 vibrancy 分层。
-        // 不要 .scrollIndicators 推开滚动条——只推开内容。
-        .contentMargins(.top, 12, for: .scrollContent)
+        // 在 tab bar 区域叠一层 withinWindow vibrancy，模糊同窗口内
+        // 滚动到 tab bar 后面的内容（控制中心同款）。
+        // SwiftUI 的 .thinMaterial 用的是 behindWindow（模糊桌面），
+        // Settings 下面没桌面所以显示成白底。这里手写 NSVisualEffectView 走 withinWindow。
+        // tab bar 是 NSToolbar 在 AppKit 更上层，overlay 不会盖住它。
+        .overlay(alignment: .top) {
+            VisualEffectBlur(material: .headerView, blendingMode: .withinWindow)
+                .frame(height: 88)
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+/// withinWindow vibrancy 包装：模糊同窗口内的内容（控制中心式效果）。
+private struct VisualEffectBlur: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = false
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
     }
 }
 
