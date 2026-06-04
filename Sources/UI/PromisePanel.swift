@@ -6,9 +6,12 @@ enum PromisePanel {
 
     @MainActor
     static func show(sessionMgr: FocusSessionManager) {
-        NSApp.activate(ignoringOtherApps: true)
+        // 不调 NSApp.activate(ignoringOtherApps:)——它会把整个 App 推到前台，
+        // 关闭 panel 时被遮住的主窗口会跟着浮上来。
+        // 改用 orderFrontRegardless + makeKey，只让 panel 自己浮起并接管键盘。
         if let existing = PromisePanelWindow.shared {
-            existing.makeKeyAndOrderFront(nil)
+            existing.orderFrontRegardless()
+            existing.makeKey()
             return
         }
         let win = PromisePanelWindow(sessionMgr: sessionMgr)
@@ -26,7 +29,8 @@ enum PromisePanel {
         } else {
             win.center()
         }
-        win.makeKeyAndOrderFront(nil)
+        win.orderFrontRegardless()
+        win.makeKey()
     }
 
     /// 快捷键专用：已打开则关闭，未打开则打开。
