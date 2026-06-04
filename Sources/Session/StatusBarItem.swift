@@ -48,9 +48,14 @@ final class StatusBarItem {
 
     private func showMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        for w in NSApp.windows where w.title == "Focus" {
-            w.makeKeyAndOrderFront(nil)
+        let focusWindows = NSApp.windows.filter { $0.title == "Focus" }
+        guard let target = focusWindows.first else { return }
+        // hideOnClose 让旧窗口残留 + SwiftUI 仍会按需创建新实例，可能累积多个；
+        // 只保留第一个为主窗口，其余统一 orderOut 防止"一点击冒 5 个窗口"
+        for w in focusWindows where w !== target {
+            w.orderOut(nil)
         }
+        target.makeKeyAndOrderFront(nil)
     }
 
     private func showContextMenu() {
