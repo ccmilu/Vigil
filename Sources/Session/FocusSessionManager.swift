@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import SwiftUI
+import AppKit
 import Combine
 import OSLog
 
@@ -341,6 +342,22 @@ final class FocusSessionManager: ObservableObject {
         // F4 修复：清理所有 per-session 提醒状态，防止残留影响下一 session
         resetPerSessionAlertState()
         SoundPlayer.shared.play(.complete)
+        // 会话结束（手动 / 自动 均触发）把主窗口拉到前台让 completedView 可见，
+        // 避免主窗口被 ⌘W 隐藏时用户只听到一声 ding 看不到复盘
+        surfaceMainWindow()
+    }
+
+    /// 把 Focus 主窗口拉到前台。逻辑与 StatusBarItem.showMainWindow 对齐：
+    /// hideOnClose 会让旧实例残留 + SwiftUI 按需创建新窗口，多个窗口同时浮起
+    /// 视觉很糟糕，所以只 makeKey 第一个、其余 orderOut。
+    private func surfaceMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        let focusWindows = NSApp.windows.filter { $0.title == "Focus" }
+        guard let target = focusWindows.first else { return }
+        for w in focusWindows where w !== target {
+            w.orderOut(nil)
+        }
+        target.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - 倒计时
