@@ -7,21 +7,15 @@ struct ContentView: View {
     @Environment(\.modelContext) private var ctx
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    header
-                    phaseSection
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 40)   // 让出 traffic lights 浮空的位置
-                .padding(.bottom, 24)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                header
+                phaseSection
             }
-            Divider()
-            footer
-                .padding(.horizontal, 24)
-                .padding(.vertical, 10)
+            .padding(.horizontal, 24)
+            .padding(.top, 40)   // 让出 traffic lights 浮空的位置
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .top) {
@@ -51,14 +45,30 @@ struct ContentView: View {
 
     // MARK: - Header
 
+    /// 快捷键提示文本——读 KeyboardShortcuts 当前设置，用户改了立刻反映。
+    /// 用 @State 缓存，应用激活时刷新。
+    @State private var shortcutHint: String = ContentView.currentShortcutHint()
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Focus")
                 .font(.system(size: 28, weight: .bold))
-            Text("点 Start Promise 或按 ⇧⌘⌥Space 弹出输入框")
+            Text(shortcutHint)
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+        ) { _ in
+            shortcutHint = Self.currentShortcutHint()
+        }
+    }
+
+    private static func currentShortcutHint() -> String {
+        if let s = KeyboardShortcuts.getShortcut(for: .startPromise) {
+            return "点「开始专注」或按 \(s) 弹出输入框"
+        }
+        return "点「开始专注」弹出输入框（可在设置里绑快捷键）"
     }
 
     // MARK: - Phase 区域
@@ -96,7 +106,7 @@ struct ContentView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "target")
-                Text("Start Promise")
+                Text("开始专注")
                     .fontWeight(.medium)
             }
             .frame(maxWidth: .infinity)
@@ -121,7 +131,7 @@ struct ContentView: View {
     private func runningView(promise: String, remaining: TimeInterval) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
-                Label("Running", systemImage: "circle.fill")
+                Label("进行中", systemImage: "circle.fill")
                     .foregroundStyle(.green)
                     .labelStyle(.titleAndIcon)
                     .font(.headline)
@@ -140,7 +150,7 @@ struct ContentView: View {
 
             HStack {
                 Spacer()
-                Button("Stop", role: .destructive) {
+                Button("停止", role: .destructive) {
                     Task { await sessionMgr.stopManually(reason: nil) }
                 }
                 .controlSize(.large)
@@ -175,15 +185,15 @@ struct ContentView: View {
     }
 
     private func levelBadge(_ level: FocusLevel) -> some View {
-        let (color, name): (Color, String) = {
+        let color: Color = {
             switch level {
-            case .fully: return (.green, "fully")
-            case .wandering: return (.yellow, "wandering")
-            case .distracted: return (.red, "distracted")
-            case .idle: return (.gray, "idle")
+            case .fully:      return .green
+            case .wandering:  return .yellow
+            case .distracted: return .red
+            case .idle:       return .gray
             }
         }()
-        return Text(name)
+        return Text(level.displayName)
             .font(.caption2.bold())
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(color.opacity(0.18), in: .capsule)
@@ -195,7 +205,7 @@ struct ContentView: View {
             FetchDescriptor<FocusSession>(predicate: #Predicate { $0.id == sessionID })
         ).first
         return VStack(alignment: .leading, spacing: 14) {
-            Label("Session 完成", systemImage: "checkmark.seal.fill")
+            Label("专注完成", systemImage: "checkmark.seal.fill")
                 .foregroundStyle(.green)
                 .font(.headline)
             if let s {
@@ -410,24 +420,6 @@ struct ContentView: View {
             SessionDetailView(session: s) {
                 selectedSession = nil
             }
-        }
-    }
-
-    // MARK: - Footer
-
-    @EnvironmentObject private var providerStore: ProviderStore
-
-    private var footer: some View {
-        HStack {
-            if let p = providerStore.selected {
-                Text("Provider: \(p.nickname) · \(p.model)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            Spacer()
-            Text("⌘, 打开设置")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
         }
     }
 

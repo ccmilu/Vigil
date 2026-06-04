@@ -51,7 +51,7 @@ struct SessionDetailView: View {
                     systemImage: "clock"
                 )
                 Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
-                Text(session.status.rawValue)
+                Text(session.status.displayName)
                     .font(.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(Color.gray.opacity(0.12), in: .capsule)
@@ -73,10 +73,10 @@ struct SessionDetailView: View {
                 height: 12
             )
             HStack(spacing: 14) {
-                legend(color: .green, label: "fully", ratio: session.fullyRatio)
-                legend(color: .yellow, label: "wandering", ratio: session.wanderingRatio)
-                legend(color: .red, label: "distracted", ratio: session.distractedRatio)
-                legend(color: .gray, label: "idle", ratio: session.idleRatio)
+                legend(color: .green, label: FocusLevel.fully.displayName, ratio: session.fullyRatio)
+                legend(color: .yellow, label: FocusLevel.wandering.displayName, ratio: session.wanderingRatio)
+                legend(color: .red, label: FocusLevel.distracted.displayName, ratio: session.distractedRatio)
+                legend(color: .gray, label: FocusLevel.idle.displayName, ratio: session.idleRatio)
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
@@ -156,15 +156,15 @@ struct SessionDetailView: View {
     }
 
     private func levelBadge(_ level: FocusLevel) -> some View {
-        let (color, name): (Color, String) = {
+        let color: Color = {
             switch level {
-            case .fully: return (.green, "fully")
-            case .wandering: return (.yellow, "wandering")
-            case .distracted: return (.red, "distracted")
-            case .idle: return (.gray, "idle")
+            case .fully:      return .green
+            case .wandering:  return .yellow
+            case .distracted: return .red
+            case .idle:       return .gray
             }
         }()
-        return Text(name)
+        return Text(level.displayName)
             .font(.caption2.bold())
             .padding(.horizontal, 6).padding(.vertical, 1)
             .background(color.opacity(0.18), in: .capsule)

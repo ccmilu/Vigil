@@ -8,6 +8,15 @@ enum SessionStatus: String, Codable, Sendable {
     case autoCompleted
     case manualCompleted
     case abandoned
+
+    var displayName: String {
+        switch self {
+        case .running:         return "进行中"
+        case .autoCompleted:   return "已完成"
+        case .manualCompleted: return "手动结束"
+        case .abandoned:       return "已放弃"
+        }
+    }
 }
 
 enum FocusLevel: String, Codable, Sendable {
@@ -15,6 +24,15 @@ enum FocusLevel: String, Codable, Sendable {
     case wandering
     case distracted
     case idle
+
+    var displayName: String {
+        switch self {
+        case .fully:      return "专注"
+        case .wandering:  return "走神"
+        case .distracted: return "分心"
+        case .idle:       return "空闲"
+        }
+    }
 }
 
 // MARK: - 实体

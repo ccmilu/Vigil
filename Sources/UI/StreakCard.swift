@@ -9,7 +9,7 @@ struct StreakCard: View {
     var body: some View {
         HStack(spacing: 16) {
             HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
+                Image(systemName: "bolt.fill")
                     .foregroundStyle(streakColor)
                 Text("\(info?.currentStreak ?? 0)")
                     .font(.system(size: 30, weight: .bold, design: .rounded))

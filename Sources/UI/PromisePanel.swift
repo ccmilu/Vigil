@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 
 enum PromisePanel {
+    private static let frameAutosaveKey = "PromisePanel.frame"
+
     @MainActor
     static func show(sessionMgr: FocusSessionManager) {
         NSApp.activate(ignoringOtherApps: true)
@@ -11,7 +13,12 @@ enum PromisePanel {
         }
         let win = PromisePanelWindow(sessionMgr: sessionMgr)
         PromisePanelWindow.shared = win
-        win.center()
+        // setFrameUsingName 还原上次位置；返回 false 说明首次/无记录，居中
+        let restored = win.setFrameUsingName(frameAutosaveKey)
+        win.setFrameAutosaveName(frameAutosaveKey)
+        if !restored {
+            win.center()
+        }
         win.makeKeyAndOrderFront(nil)
     }
 }
@@ -26,7 +33,7 @@ final class PromisePanelWindow: NSPanel {
             backing: .buffered,
             defer: false
         )
-        title = "What's the promise?"
+        title = "这次专注做什么？"
         isFloatingPanel = true
         level = .floating
         titlebarAppearsTransparent = true
@@ -67,7 +74,7 @@ private struct PromisePanelContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("This time I promise to...")
+            Text("我这次要专注于…")
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
@@ -122,11 +129,11 @@ private struct PromisePanelContent: View {
 
             HStack {
                 Spacer()
-                Button("Cancel") { dismiss() }
+                Button("取消") { dismiss() }
                     .keyboardShortcut(.cancelAction)
 
                 if aiSuggestion == nil && aiUnreachable == nil {
-                    Button(isStarting ? "校验中…" : "Start \(durationMin) min") {
+                    Button(isStarting ? "校验中…" : "开始 \(durationMin) 分钟") {
                         Task { await onStartTapped() }
                     }
                     .keyboardShortcut(.defaultAction)

@@ -66,7 +66,7 @@ struct OnboardingView: View {
         permissionPage(
             icon: "rectangle.dashed.badge.record",
             title: "屏幕录制权限",
-            description: "Focus 需要定时截屏给 AI 分析，判断你是否在做承诺的事。截图本地保存，仅按你选择的 Provider 发出。",
+            description: "Focus 需要定时截屏给 AI 分析，判断你是否在做承诺的事。截图本地保存，仅按你选择的服务发出。",
             granted: screenRecordingGranted,
             actionTitle: "打开系统设置",
             action: {
@@ -113,15 +113,16 @@ struct OnboardingView: View {
                     .font(.system(size: 28))
                     .foregroundStyle(.purple)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("配置 AI Provider")
+                    Text("配置 AI 服务")
                         .font(.headline)
                     Text("可在这里直接增 / 删 / 改 / 测试。视觉模型才能分析截图。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            ProvidersTab(store: ProviderStore.shared)
-                .frame(maxHeight: .infinity)
+            ScrollView {
+                ProvidersTab(store: ProviderStore.shared)
+            }
         }
         .padding(.horizontal, 20).padding(.vertical, 16)
     }

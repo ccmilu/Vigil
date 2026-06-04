@@ -8,19 +8,19 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             ShortcutsTab()
-                .tabItem { Label("Shortcuts", systemImage: "keyboard") }
+                .tabItem { Label("快捷键", systemImage: "keyboard") }
             ProvidersTab(store: store)
                 .tabItem { Label("AI", systemImage: "brain") }
             CaptureTab(settings: settings)
-                .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
+                .tabItem { Label("截屏", systemImage: "camera.viewfinder") }
             SoundTab()
-                .tabItem { Label("Sound", systemImage: "speaker.wave.2") }
+                .tabItem { Label("声音", systemImage: "speaker.wave.2") }
             StorageTab()
-                .tabItem { Label("Storage", systemImage: "externaldrive") }
+                .tabItem { Label("存储", systemImage: "externaldrive") }
             DebugTab(settings: settings)
-                .tabItem { Label("Debug", systemImage: "ladybug") }
+                .tabItem { Label("调试", systemImage: "ladybug") }
         }
-        .frame(minWidth: 680, idealWidth: 720, minHeight: 520, idealHeight: 580)
+        .frame(minWidth: 520, idealWidth: 560, minHeight: 440, idealHeight: 480)
     }
 }
 
@@ -134,9 +134,9 @@ private struct SoundTab: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                soundPickerRow(label: "开始 session", cue: .start, selected: $startName)
+                soundPickerRow(label: "开始专注", cue: .start, selected: $startName)
                 soundPickerRow(label: "检测到分心", cue: .distract, selected: $distractName)
-                soundPickerRow(label: "session 完成", cue: .complete, selected: $completeName)
+                soundPickerRow(label: "专注完成", cue: .complete, selected: $completeName)
             }
             .padding(20)
         }
@@ -151,21 +151,39 @@ private struct SoundTab: View {
                     .font(.caption2.monospaced())
                     .foregroundStyle(.secondary)
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(SoundPlayer.availableSystemSounds, id: \.self) { name in
-                        SoundChip(
-                            name: name,
-                            isSelected: selected.wrappedValue == name,
-                            onSelect: {
-                                selected.wrappedValue = name
-                                SoundPlayer.shared.setSound(cue, name: name)
-                            }
-                        )
+            // 横向滚动：两侧渐变 fade 暗示"还有内容"，滚动条独占底部一行
+            ScrollView(.horizontal) {
+                // VStack + Spacer 强制把 chip 钉在顶，下方留 22pt 给 indicator
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 6) {
+                        ForEach(SoundPlayer.availableSystemSounds, id: \.self) { name in
+                            SoundChip(
+                                name: name,
+                                isSelected: selected.wrappedValue == name,
+                                onSelect: {
+                                    selected.wrappedValue = name
+                                    SoundPlayer.shared.setSound(cue, name: name)
+                                }
+                            )
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    Spacer(minLength: 14)
                 }
-                .padding(.vertical, 2)
             }
+            .scrollIndicators(.visible, axes: .horizontal)
+            .frame(height: 50)
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0.0),
+                        .init(color: .black, location: 0.10),
+                        .init(color: .black, location: 0.90),
+                        .init(color: .clear, location: 1.0)
+                    ],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
         }
         .padding(12)
     }
@@ -177,11 +195,17 @@ private struct SoundChip: View {
     let onSelect: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            Text(name)
-                .font(.caption)
+        // 横向并排多个 chip 避开嵌套玻璃造成的奇怪阴影：
+        // 选中用 .borderedProminent + 强调色；未选 .bordered。视觉差异够，且无玻璃叠加。
+        Group {
+            if isSelected {
+                Button(action: onSelect) { Text(name).font(.caption) }
+                    .buttonStyle(.borderedProminent)
+            } else {
+                Button(action: onSelect) { Text(name).font(.caption) }
+                    .buttonStyle(.bordered)
+            }
         }
-        .glassButtonStyle(prominent: isSelected)
         .controlSize(.small)
         .onHover { hovering in
             if hovering {
@@ -338,7 +362,7 @@ private struct ShortcutsTab: View {
     var body: some View {
         Form {
             KeyboardShortcuts.Recorder(for: .startPromise) {
-                Text("起 Promise 面板")
+                Text("打开专注面板")
             }
         }
         .padding(20)
@@ -353,12 +377,12 @@ struct ProvidersTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("AI Providers")
+                Text("AI 服务")
                     .font(.headline)
                 Spacer()
                 Button {
                     let p = AIProvider(
-                        nickname: "新建 Provider",
+                        nickname: "新建服务",
                         baseURL: "http://localhost:1234/v1",
                         model: "qwen2.5-vl-7b-instruct",
                         apiKey: ""
@@ -441,7 +465,7 @@ struct ProvidersTab: View {
             if isLocal(p) {
                 Image(systemName: "lock.shield")
                     .foregroundStyle(.green)
-                    .help("本地 / 局域网 Provider，不出公网")
+                    .help("本地 / 局域网服务，不出公网")
             }
             Button("编辑") { editing = p }
                 .buttonStyle(.borderless)
@@ -502,7 +526,7 @@ private struct ProviderEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("编辑 Provider")
+                Text("编辑服务")
                     .font(.headline)
                 Spacer()
                 Button("完成") { onDone() }

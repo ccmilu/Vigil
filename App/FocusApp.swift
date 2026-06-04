@@ -59,7 +59,7 @@ struct FocusApp: App {
                         .ignoresSafeArea()
                     OnboardingView { onboardingDone = true }
                         .background(.regularMaterial, in: .rect(cornerRadius: 12))
-                        .shadow(radius: 30)
+                        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
                         .transition(.opacity)
                 }
             }
