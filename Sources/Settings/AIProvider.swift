@@ -87,10 +87,21 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
 
 extension AIProvider {
     /// 首次启动用的默认 provider。Key 在 ProviderStore 初始化时写 Keychain。
+    /// DEBUG 用开发者本地 LM Studio；Release 给一个空 placeholder，引导
+    /// 用户去 Settings 自填，且不暴露开发期的局域网 IP。
+    #if DEBUG
     static let demoFallback = AIProvider(
         nickname: "本地 LM Studio",
         baseURL: DemoConfig.baseURL.absoluteString,
         model: DemoConfig.model,
         apiKey: ""  // Key 走 Keychain
     )
+    #else
+    static let demoFallback = AIProvider(
+        nickname: "请先到设置中配置 AI 服务",
+        baseURL: DemoConfig.baseURL.absoluteString,
+        model: DemoConfig.model,
+        apiKey: ""
+    )
+    #endif
 }
