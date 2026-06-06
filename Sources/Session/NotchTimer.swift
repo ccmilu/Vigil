@@ -736,7 +736,10 @@ struct FocusTimelineBar: View {
         return max(0, min(Self.binCount, Int(ceil(elapsed / binSize))))
     }
 
-    /// 取第 i 格的众数 level（无数据返回 nil）
+    /// 取第 i 格的众数 level（无数据返回 nil）。
+    /// 平票时按"严重性"固定 tie-break（distracted > wandering > idle > fully）——
+    /// Dictionary.max 在 value 相同时 iteration 顺序不稳定，会导致同一格在每次
+    /// SwiftUI re-render 颜色随机切换。让警示信号优先显示更贴合监督语义。
     private func dominantLevel(for binIndex: Int) -> FocusLevel? {
         guard let start = sessionStart else { return nil }
         let binStart = start.addingTimeInterval(Double(binIndex) * binSize)
@@ -745,7 +748,20 @@ struct FocusTimelineBar: View {
         for entry in timeline where entry.timestamp >= binStart && entry.timestamp < binEnd {
             counts[entry.level, default: 0] += 1
         }
-        return counts.max(by: { $0.value < $1.value })?.key
+        return counts.max(by: { lhs, rhs in
+            if lhs.value != rhs.value { return lhs.value < rhs.value }
+            return Self.tieBreakRank(lhs.key) > Self.tieBreakRank(rhs.key)
+        })?.key
+    }
+
+    /// 平票排序权重——数字越小越优先。配合 max(by:) 的 `>` 比较取最优先的。
+    private static func tieBreakRank(_ level: FocusLevel) -> Int {
+        switch level {
+        case .distracted: return 0
+        case .wandering:  return 1
+        case .idle:       return 2
+        case .fully:      return 3
+        }
     }
 
     var body: some View {
