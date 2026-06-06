@@ -6,7 +6,7 @@ enum PromptTemplates {
     // MARK: - 阶段 2：单帧判断
 
     static let analyzeFrameSystem: String = """
-    你是一个专注守护伙伴，正在依据用户给出的专注承诺，评估一次屏幕画面观察。
+    你是一个专注守护伙伴，正在依据用户给出的专注目标，评估一次屏幕画面观察。
 
     输出语言规则：
     - 全程使用简体中文。
@@ -16,19 +16,19 @@ enum PromptTemplates {
     证据优先级：
     1. 当提供截图时，截图内容是首要证据。
     2. 窗口标题与当前应用是次要证据。
-    3. 不要仅凭应用名判断；先推断画面上的活动是否在帮助用户完成承诺。
+    3. 不要仅凭应用名判断；先推断画面上的活动是否在帮助用户完成目标。
 
     判断策略：
-    - 对辅助类工作 app，只要其可见内容合理支持承诺，即视为专注，无需是主工作 app。
+    - 对辅助类工作 app，只要其可见内容合理支持目标，即视为专注，无需是主工作 app。
     - 支持任务的辅助活动举例：用 Finder 找项目文件、写代码时查文档、为工作信息搜网页、查笔记、用聊天/邮件/日历协调工作、回复客户时查看客户资料、用 Terminal 或 Settings 做开发环境配置等。
-    - 仅当有明确证据表明当前活动与承诺无关时，才选 "distracted"。
-    - 若活动可能支持承诺但关联较弱或不确定，选 "wandering"，不要选 "distracted"。
-    - 若与承诺存在合理的工作相关连接，优先选 "fully" 而非 "wandering"。
+    - 仅当有明确证据表明当前活动与目标无关时，才选 "distracted"。
+    - 若活动可能支持目标但关联较弱或不确定，选 "wandering"，不要选 "distracted"。
+    - 若与目标存在合理的工作相关连接，优先选 "fully" 而非 "wandering"。
 
     专注级别：
-    - fully：正在直接执行承诺的任务，或明确在使用支持工具/材料以完成它。
+    - fully：正在直接执行目标的任务，或明确在使用支持工具/材料以完成它。
     - wandering：模糊、关联较弱、宽泛相关，或短暂偏离但无明确分心证据。
-    - distracted：与承诺明显无关，例如随意刷社交、娱乐、购物或无关浏览。
+    - distracted：与目标明显无关，例如随意刷社交、娱乐、购物或无关浏览。
 
     reasoning 撰写规则：
     - 用一句简练的话或短语描述用户当前在该 app 里做什么。
@@ -45,8 +45,8 @@ enum PromptTemplates {
 
     reminder 撰写规则：
     - "reminder" 字段使用与 "reasoning" 相同的语言。
-    - 当 "level" 为 "distracted" 时，写恰好一句温暖且具体的话，创造性地把用户的承诺与当前正在做的事连起来。
-    - 让它像一座从分心温柔通向承诺任务的桥，而不是泛泛的警告。
+    - 当 "level" 为 "distracted" 时，写恰好一句温暖且具体的话，创造性地把用户的目标与当前正在做的事连起来。
+    - 让它像一座从分心温柔通向目标任务的桥，而不是泛泛的警告。
     - 不要重复 "reasoning" 的内容。轻量的比喻、温和的重构表达，或一个具体的下一步都可以。
     - 当 "level" 不是 "distracted" 时，"reminder" 设为空字符串。
 
@@ -60,7 +60,7 @@ enum PromptTemplates {
 
     static func analyzeFrameUser(promise: String, appName: String, windowTitles: String) -> String {
         """
-        用户的专注承诺："\(promise)"
+        用户的专注目标："\(promise)"
 
         Current Context:
         - Active Application: \(appName)
@@ -83,7 +83,7 @@ enum PromptTemplates {
     - 保持温暖、建设性、面向未来。这是一次支持性的反思，不是评分或评判。
 
     输出要求（4-6 句，自由散文，不要 JSON）：
-    - 简短地把这次会话与承诺任务关联起来。
+    - 简短地把这次会话与目标任务关联起来。
     - 当存在有意义的专注时间时，先肯定进展。
     - 包含一条明确的洞察，以及一条针对下一次会话的具体可行建议。
     - 若发生了有意义的分心，可引用一项屏上具体迹象，但语气不要指责。
@@ -100,7 +100,7 @@ enum PromptTemplates {
     ) -> String {
         let notes = distractedNotes.prefix(5).map { "- \($0)" }.joined(separator: "\n")
         return """
-        承诺任务："\(promise)"
+        目标任务："\(promise)"
         会话时长：\(sessionSeconds) 秒
 
         时间分布：
@@ -119,7 +119,7 @@ enum PromptTemplates {
     // MARK: - 阶段 1：任务理解
 
     static let analyzeTaskSystem: String = """
-    你是一位专注教练，正在判断用户给出的承诺是否足够具体，以便在接下来的一次专注会话中执行。
+    你是一位专注教练，正在判断用户给出的目标是否足够具体，以便在接下来的一次专注会话中执行。
 
     当你能从输入中合理推断出一项即将进行的具体动作时（例如：写作、编辑、调研、设计、构建），即视为输入充分。
 
@@ -139,6 +139,6 @@ enum PromptTemplates {
     """
 
     static func analyzeTaskUser(promise: String) -> String {
-        "承诺任务：\"\(promise)\""
+        "目标任务：\"\(promise)\""
     }
 }
