@@ -21,7 +21,7 @@
 https://github.com/user-attachments/assets/389864fc-63b7-4878-ab55-86b22609f799
 
 <p align="center">
-  写一句承诺 → AI 全程看着 → 走神拉你回来 → 结束 AI 复盘
+  写一句目标 → AI 全程看着 → 走神拉你回来 → 结束 AI 复盘
 </p>
 
 ## 为什么是 Vigil
@@ -43,7 +43,7 @@ https://github.com/user-attachments/assets/389864fc-63b7-4878-ab55-86b22609f799
 <table>
   <tr>
     <td align="center" width="50%"><b>主窗口 + 历史记录</b><br/><img src="docs/screenshots/main.jpg" /></td>
-    <td align="center" width="50%"><b>写一句承诺，选时长</b><br/><img src="docs/screenshots/promise.jpg" /></td>
+    <td align="center" width="50%"><b>写一句目标，选时长</b><br/><img src="docs/screenshots/promise.jpg" /></td>
   </tr>
   <tr>
     <td align="center" colspan="2"><b>分心时，灵动岛提醒 + 系统通知第一时间提醒</b><br/><img src="docs/screenshots/guard.jpg" /></td>
