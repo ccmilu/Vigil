@@ -10,9 +10,11 @@
 
 [![Release](https://img.shields.io/github/v/release/ccmilu/Vigil?include_prereleases&label=release)](https://github.com/ccmilu/Vigil/releases)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-black?logo=apple)](https://github.com/ccmilu/Vigil/releases)
-[![Swift](https://img.shields.io/badge/Swift-5.10-orange?logo=swift)](https://www.swift.org/)
+[![Swift](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)](https://www.swift.org/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/ccmilu/Vigil?style=social)](https://github.com/ccmilu/Vigil/stargazers)
+
+[English](README.en.md) · 简体中文
 
 </div>
 
