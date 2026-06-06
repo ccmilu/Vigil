@@ -39,7 +39,9 @@ tmp/
 
 Sources/Config/LocalConfig.swift
 CLAUDE.md
-docs/
+docs/*
+!docs/assets/
+!docs/screenshots/
 Project.yml
 App/Info.plist
 scripts/
