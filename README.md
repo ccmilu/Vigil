@@ -18,9 +18,7 @@
 
 ---
 
-<p align="center">
-  <video src="https://github.com/ccmilu/Vigil/releases/download/v0.1.0-media/6.6.2.mp4" controls width="720"></video>
-</p>
+https://github.com/user-attachments/assets/389864fc-63b7-4878-ab55-86b22609f799
 
 <p align="center">
   写一句承诺 → AI 全程看着 → 走神拉你回来 → 结束 AI 复盘
