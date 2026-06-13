@@ -1,0 +1,9 @@
+// 签名配置（入库，不含任何私密信息）。
+//
+// 开发者本机的 Team ID 不入版本库 —— 写进同目录的 Local.xcconfig：
+//     DEVELOPMENT_TEAM = XXXXXXXXXX
+// 没有 Local.xcconfig 时（多数贡献者场景），下面的可选 include（带 ? 号）会被
+// 静默跳过，DEVELOPMENT_TEAM 留空。配合 CODE_SIGN_STYLE = Automatic，Xcode 会
+// 用你登录的开发者账号（免费 Personal Team 即可）自动签名 —— 在 Xcode 的
+// Signing & Capabilities 里选自己的 Team 即可。
+#include? "Local.xcconfig"

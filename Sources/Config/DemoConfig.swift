@@ -2,7 +2,7 @@ import Foundation
 
 /// 默认 AI 配置。
 ///
-/// DEBUG 用开发者本地的 LM Studio（含 LAN IP + API key），方便日常开发跑通；
+/// DEBUG 用开发者本地的 LM Studio（含 LAN IP），方便日常开发跑通；
 /// Release **不带任何实环境信息**——baseURL 是占位 localhost、model / apiKey
 /// 留空，避免开发期的局域网 IP 与个人 API key 随 .dmg 发出去。
 ///
@@ -21,9 +21,9 @@ enum DemoConfig {
     /// 纯文本模型（如 Qwen3-4B）会忽略图片或报错。
     static let model = "qwen2.5-vl-7b-instruct"
 
-    /// API Key 从 LocalConfig 读取（被 .gitignore 屏蔽，不进版本库）。
-    /// 若 LocalConfig.swift 不存在，DEBUG 构建会报错，提示照着模板新建一个。
-    static let apiKey = LocalConfig.apiKey
+    /// API Key 默认留空。LM Studio / Ollama 默认不校验此字段；若你的服务端开了
+    /// "API Key Required"，在 App 内「设置」里填一次即可（持久化到 Keychain）。
+    static let apiKey = ""
     #else
     /// Release：占位符 URL，用户首启会看到默认 provider 但 URL/model/key 均
     /// 是空白或 localhost，需自己去 Settings 配置后才能跑。

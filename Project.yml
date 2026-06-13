@@ -1,0 +1,102 @@
+name: Vigil
+options:
+  bundleIdPrefix: com.jason12138
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+# 签名 Team ID 不写在这里（不入库）—— 由 Config/Signing.xcconfig 引入，
+# 它再用 #include? 可选拉取被 .gitignore 屏蔽的 Config/Local.xcconfig。
+# 贡献者没有 Local.xcconfig 时 Team 留空，靠 Automatic 签名选自己的账号。
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+    MARKETING_VERSION: "0.1.1"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.2.0"
+
+targets:
+  Vigil:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+      - path: Sources
+      - path: Resources
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: Vigil
+        CFBundleDisplayName: Vigil
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDevelopmentRegion: zh-Hans
+        CFBundleLocalizations: [zh-Hans]
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHumanReadableCopyright: "Copyright © 2026 jason12138. All rights reserved."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: YES
+          NSAllowsArbitraryLoads: YES
+        NSMainStoryboardFile: ""
+        NSPrincipalClass: NSApplication
+    entitlements:
+      path: App/Vigil.entitlements
+      properties:
+        com.apple.security.app-sandbox: YES
+        com.apple.security.network.client: YES
+        com.apple.security.files.user-selected.read-write: YES
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jason12138.vigil
+        INFOPLIST_KEY_LSUIElement: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - package: KeyboardShortcuts
+
+  VigilTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/FocusTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jason12138.vigil.tests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Vigil.app/Contents/MacOS/Vigil
+    dependencies:
+      - target: Vigil
+
+schemes:
+  Vigil:
+    build:
+      targets:
+        Vigil: all
+        VigilTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - VigilTests
+      gatherCoverageData: true
+    profile:
+      config: Release
+    archive:
+      config: Release
