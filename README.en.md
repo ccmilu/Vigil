@@ -20,7 +20,7 @@ English · [简体中文](README.md)
 
 ---
 
-https://github.com/user-attachments/assets/389864fc-63b7-4878-ab55-86b22609f799
+https://github.com/user-attachments/assets/5f46c8cd-623d-4fe4-be5d-33eb92025ad5
 
 <p align="center">
   Write a goal → AI watches your screen → Pulls you back when you drift → Reflective AI summary
