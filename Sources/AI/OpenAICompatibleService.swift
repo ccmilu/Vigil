@@ -14,6 +14,10 @@ struct OpenAICompatibleService: AIService {
     let session: URLSession
     let timeout: TimeInterval
     let debugSink: AIDebugSink?
+    /// analyzeTask（用 String 入参，没机会经 input struct 传 language）的回复语言。
+    /// SessionManager 在构造 service 时按用户当前语言注入；
+    /// 默认值兜测试与历史调用路径。
+    let responseLanguage: String
 
     init(
         baseURL: URL = DemoConfig.baseURL,
@@ -21,7 +25,8 @@ struct OpenAICompatibleService: AIService {
         apiKey: String = DemoConfig.apiKey,
         session: URLSession = .shared,
         timeout: TimeInterval = DemoConfig.requestTimeout,
-        debugSink: AIDebugSink? = nil
+        debugSink: AIDebugSink? = nil,
+        responseLanguage: String = kDefaultAIResponseLanguage
     ) {
         self.baseURL = baseURL
         self.model = model
@@ -29,12 +34,13 @@ struct OpenAICompatibleService: AIService {
         self.session = session
         self.timeout = timeout
         self.debugSink = debugSink
+        self.responseLanguage = responseLanguage
     }
 
     // MARK: - AIService
 
     func analyzeTask(_ promise: String) async throws -> TaskAnalysis {
-        let system = PromptTemplates.analyzeTaskSystem
+        let system = PromptTemplates.analyzeTaskSystem(responseLanguage: responseLanguage)
         let user = PromptTemplates.analyzeTaskUser(promise: promise)
         let raw = try await loggedChat(
             stage: "analyzeTask",
@@ -44,7 +50,7 @@ struct OpenAICompatibleService: AIService {
     }
 
     func analyzeFrame(_ input: FrameAnalysisInput) async throws -> FrameAnalysis {
-        let system = PromptTemplates.analyzeFrameSystem
+        let system = PromptTemplates.analyzeFrameSystem(responseLanguage: input.responseLanguage)
         let user = PromptTemplates.analyzeFrameUser(
             promise: input.promise,
             appName: input.appName,
@@ -64,7 +70,7 @@ struct OpenAICompatibleService: AIService {
     }
 
     func summarize(_ input: SummaryInput) async throws -> String {
-        let system = PromptTemplates.summarizeSystem
+        let system = PromptTemplates.summarizeSystem(responseLanguage: input.responseLanguage)
         let user = PromptTemplates.summarizeUser(
             promise: input.promise,
             sessionSeconds: input.sessionSeconds,

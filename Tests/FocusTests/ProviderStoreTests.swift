@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 @MainActor
 final class ProviderStoreTests: XCTestCase {
@@ -14,7 +14,10 @@ final class ProviderStoreTests: XCTestCase {
         let s = ProviderStore()
         XCTAssertEqual(s.providers.count, 1)
         XCTAssertNotNil(s.selectedID)
-        XCTAssertEqual(s.selected?.nickname, "本地 LM Studio")
+        // nickname 走 L() 本地化，跟随系统语言（中: "本地 LM Studio" / 英: "Local LM Studio"），
+        // 不锁字面值；只断言非空确认 demoFallback 生效。
+        XCTAssertFalse(s.selected?.nickname.isEmpty ?? true,
+                       "首启默认 provider 应有 nickname")
     }
 
     func testAddUpdateRemove() {

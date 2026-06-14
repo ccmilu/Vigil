@@ -45,7 +45,7 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDevelopmentRegion: zh-Hans
-        CFBundleLocalizations: [zh-Hans]
+        CFBundleLocalizations: [zh-Hans, en]
         LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         LSApplicationCategoryType: public.app-category.productivity
         NSHumanReadableCopyright: "Copyright © 2026 jason12138. All rights reserved."

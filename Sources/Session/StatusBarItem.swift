@@ -24,7 +24,7 @@ final class StatusBarItem {
             let img = NSImage(named: "MenubarIcon")
             img?.isTemplate = true  // 系统自动反色：浅模式黑、深模式白
             button.image = img
-            button.toolTip = "Vigil · 点击开始一次专注"
+            button.toolTip = L("Vigil · 点击开始一次专注")
             button.target = self
             button.action = #selector(handleClick(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -60,12 +60,18 @@ final class StatusBarItem {
 
     private func showContextMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "开始专注…", action: #selector(menuStart), keyEquivalent: "")
+        // 每次弹菜单时现读 L()，保证用户切语言后立即生效
+        menu.addItem(withTitle: L("开始专注…"), action: #selector(menuStart), keyEquivalent: "")
             .target = self
-        menu.addItem(withTitle: "显示主窗口", action: #selector(menuShowMain), keyEquivalent: "")
+        menu.addItem(withTitle: L("显示主窗口"), action: #selector(menuShowMain), keyEquivalent: "")
             .target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "退出 Vigil", action: #selector(menuQuit), keyEquivalent: "q")
+        // keyEquivalent: "," 默认带 ⌘ 修饰符，菜单里展示 ⌘, 提示。
+        // SwiftUI Settings scene 本身就响应系统级 ⌘,，提示和实际可用快捷键一致。
+        menu.addItem(withTitle: L("设置…"), action: #selector(menuOpenSettings), keyEquivalent: ",")
+            .target = self
+        menu.addItem(.separator())
+        menu.addItem(withTitle: L("退出 Vigil"), action: #selector(menuQuit), keyEquivalent: "q")
             .target = self
         item?.menu = menu
         item?.button?.performClick(nil)
@@ -74,5 +80,11 @@ final class StatusBarItem {
 
     @objc private func menuStart() { startPromise() }
     @objc private func menuShowMain() { showMainWindow() }
+    @objc private func menuOpenSettings() {
+        // 菜单栏触发时其他 App 通常在前台，必须先 activate 才能让 Settings window 真正
+        // 拿到键盘焦点。SwiftUI 14+ 的 Settings scene 响应 showSettingsWindow: selector。
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 }

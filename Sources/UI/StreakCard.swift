@@ -3,6 +3,8 @@ import SwiftData
 
 struct StreakCard: View {
     @Query private var streaks: [StreakInfo]
+    // 读 environment locale，让"上次打卡"的日期格式跟用户设的语言一致（中→6月6日 / 英→Jun 6）
+    @Environment(\.locale) private var locale
 
     private var info: StreakInfo? { streaks.first }
 
@@ -29,7 +31,7 @@ struct StreakCard: View {
                     Text("上次打卡")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
-                    Text(last.formatted(.dateTime.month().day()))
+                    Text(last.formatted(.dateTime.locale(locale).month().day()))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }

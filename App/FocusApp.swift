@@ -17,6 +17,7 @@ struct FocusApp: App {
     @StateObject private var providerStore = ProviderStore()
     @StateObject private var appSettings = AppSettings()
     @StateObject private var sessionMgr: FocusSessionManager
+    @StateObject private var localizer = LocalizationManager.shared
 
     /// 全局副作用只跑一次。SwiftUI App init 可能因为 environment 变化被多次调用；
     /// 主窗口关闭重开时 ContentView 的 .task 会重跑——快捷键 / Notifier / StatusBar 注册
@@ -31,9 +32,9 @@ struct FocusApp: App {
         let mgr = FocusSessionManager(
             modelContainer: AppContainer.shared,
             settings: settings,
-            serviceFactory: { @MainActor sink in
-                providers.selected?.makeService(debugSink: sink)
-                    ?? OpenAICompatibleService(debugSink: sink)
+            serviceFactory: { @MainActor sink, lang in
+                providers.selected?.makeService(debugSink: sink, responseLanguage: lang)
+                    ?? OpenAICompatibleService(debugSink: sink, responseLanguage: lang)
             }
         )
         _providerStore = StateObject(wrappedValue: providers)
@@ -65,6 +66,7 @@ struct FocusApp: App {
                     .environmentObject(sessionMgr)
                     .environmentObject(providerStore)
                     .environmentObject(appSettings)
+                    .environmentObject(localizer)
                     .frame(minWidth: 560, minHeight: 420)
                 if !onboardingDone {
                     Color.black.opacity(0.001)  // 拦截背后交互
@@ -76,6 +78,9 @@ struct FocusApp: App {
                 }
             }
             .glassWindow(hideOnClose: true)
+            // 注入用户选择的 locale 让 SwiftUI Text(LocalizedStringKey) 跟随翻译。
+            // .system 时也注入明确 locale，避免回退到 development region 默认 (zh-Hans)
+            .environment(\.locale, localizer.language.locale)
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
@@ -85,6 +90,8 @@ struct FocusApp: App {
             SettingsView()
                 .environmentObject(appSettings)
                 .environmentObject(providerStore)
+                .environmentObject(localizer)
+                .environment(\.locale, localizer.language.locale)
                 .glassWindow()
         }
     }

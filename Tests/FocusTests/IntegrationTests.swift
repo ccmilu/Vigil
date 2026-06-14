@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 /// 真集成测试：会向 DemoConfig 配的真实 LM Studio 发请求。
 ///

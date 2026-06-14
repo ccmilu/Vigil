@@ -681,11 +681,11 @@ struct NotchView: View {
 
     private var levelLabel: String {
         switch state.level {
-        case .fully: return "专注"
-        case .wandering: return "走神"
-        case .distracted: return "分心"
-        case .idle: return "空闲"
-        case nil: return "等待"
+        case .fully: return L("专注")
+        case .wandering: return L("走神")
+        case .distracted: return L("分心")
+        case .idle: return L("空闲")
+        case nil: return L("等待")
         }
     }
 
@@ -860,11 +860,11 @@ struct FocusTimelineBar: View {
         let level = dominantLevel(for: index)
         let stateText: String
         switch level {
-        case .fully:      stateText = "专注"
-        case .wandering:  stateText = "走神"
-        case .distracted: stateText = "分心"
-        case .idle:       stateText = "空闲"
-        case .none:       stateText = "无数据"
+        case .fully:      stateText = L("专注")
+        case .wandering:  stateText = L("走神")
+        case .distracted: stateText = L("分心")
+        case .idle:       stateText = L("空闲")
+        case .none:       stateText = L("无数据")
         }
         return "\(timeStr) · \(stateText)"
     }

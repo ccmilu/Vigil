@@ -26,8 +26,8 @@ enum Notifier {
 
     static func notifyBreakEnd() async {
         let content = UNMutableNotificationContent()
-        content.title = "休息结束"
-        content.body = "可以回到工作了"
+        content.title = L("休息结束")
+        content.body = L("可以回到工作了")
         content.sound = .default
         content.interruptionLevel = .timeSensitive
         let req = UNNotificationRequest(
@@ -40,8 +40,9 @@ enum Notifier {
 
     static func notifyDistraction(reminder: String) async {
         let content = UNMutableNotificationContent()
-        content.title = "Vigil · 拉你回来一下"
-        content.body = reminder.isEmpty ? "似乎偏离了承诺，看看回到正事？" : reminder
+        content.title = L("Vigil · 拉你回来一下")
+        // reminder 来自 AI（已按当前语言生成）；为空时回落到本地化默认文案
+        content.body = reminder.isEmpty ? L("似乎偏离了承诺，看看回到正事？") : reminder
         content.sound = .default
         content.interruptionLevel = .timeSensitive
         let req = UNNotificationRequest(

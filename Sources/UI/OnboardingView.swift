@@ -141,12 +141,15 @@ struct OnboardingView: View {
         .padding(.vertical, 24)
     }
 
+    /// 各参数从 String 改成 LocalizedStringKey，让传入的中文 literal 走 SwiftUI 的
+    /// LocalizedStringKey 查表（之前是 Text(String) verbatim 不本地化）。
+    /// 调用方的 String literal 会被 Swift 隐式转成 LocalizedStringKey；三元 String 也能传。
     private func permissionPage(
         icon: String,
-        title: String,
-        description: String,
+        title: LocalizedStringKey,
+        description: LocalizedStringKey,
         granted: Bool,
-        actionTitle: String,
+        actionTitle: LocalizedStringKey,
         action: @escaping () -> Void,
         recheck: @escaping () async -> Void
     ) -> some View {

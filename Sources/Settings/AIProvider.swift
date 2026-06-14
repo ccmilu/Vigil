@@ -10,7 +10,7 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
         var id: String { rawValue }
         var displayName: String {
             switch self {
-            case .openaiCompatible: return "OpenAI 兼容"
+            case .openaiCompatible: return L("OpenAI 兼容")
             }
         }
     }
@@ -71,7 +71,12 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
 
     /// 构造对应的 AIService。debugSink 非 nil 时启用 prompts.jsonl 记录。
     /// 优先用内存中的 apiKey；若为空再从 Keychain 取。
-    func makeService(debugSink: AIDebugSink? = nil) -> AIService {
+    /// responseLanguage 决定 AI 返回 reasoning / reminder / summary 用哪种语言；
+    /// SessionManager 在起 session 时按 LocalizationManager 当前值注入。
+    func makeService(
+        debugSink: AIDebugSink? = nil,
+        responseLanguage: String = kDefaultAIResponseLanguage
+    ) -> AIService {
         let url = URL(string: baseURL) ?? DemoConfig.baseURL
         let key = apiKey.isEmpty
             ? (KeychainStore.get(for: id.uuidString) ?? "")
@@ -80,7 +85,8 @@ struct AIProvider: Codable, Identifiable, Equatable, Hashable {
             baseURL: url,
             model: model,
             apiKey: key,
-            debugSink: debugSink
+            debugSink: debugSink,
+            responseLanguage: responseLanguage
         )
     }
 }
@@ -89,19 +95,27 @@ extension AIProvider {
     /// 首次启动用的默认 provider。Key 在 ProviderStore 初始化时写 Keychain。
     /// DEBUG 用开发者本地 LM Studio；Release 给一个空 placeholder，引导
     /// 用户去 Settings 自填，且不暴露开发期的局域网 IP。
+    ///
+    /// nickname 用 L(...) 本地化——首启时按当前语言显示"Local LM Studio" / "本地 LM Studio"。
+    /// 注意：nickname 之后会被持久化（用户改名或后续 reload 时），所以这里的本地化只影响
+    /// **首启那一刻的默认显示**；之后用户在 Settings 里改的名字才是 source of truth。
     #if DEBUG
-    static let demoFallback = AIProvider(
-        nickname: "本地 LM Studio",
-        baseURL: DemoConfig.baseURL.absoluteString,
-        model: DemoConfig.model,
-        apiKey: ""  // Key 走 Keychain
-    )
+    static var demoFallback: AIProvider {
+        AIProvider(
+            nickname: L("本地 LM Studio"),
+            baseURL: DemoConfig.baseURL.absoluteString,
+            model: DemoConfig.model,
+            apiKey: ""  // Key 走 Keychain
+        )
+    }
     #else
-    static let demoFallback = AIProvider(
-        nickname: "请先到设置中配置 AI 服务",
-        baseURL: DemoConfig.baseURL.absoluteString,
-        model: DemoConfig.model,
-        apiKey: ""
-    )
+    static var demoFallback: AIProvider {
+        AIProvider(
+            nickname: L("请先到设置中配置 AI 服务"),
+            baseURL: DemoConfig.baseURL.absoluteString,
+            model: DemoConfig.model,
+            apiKey: ""
+        )
+    }
     #endif
 }

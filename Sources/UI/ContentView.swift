@@ -5,6 +5,8 @@ import KeyboardShortcuts
 struct ContentView: View {
     @EnvironmentObject private var sessionMgr: FocusSessionManager
     @Environment(\.modelContext) private var ctx
+    /// 历史列表的日期格式跟随用户语言（中→"2026年6月14日 21:04" / 英→"Jun 14, 2026, 9:04 PM"）
+    @Environment(\.locale) private var locale
 
     var body: some View {
         ScrollView {
@@ -48,14 +50,28 @@ struct ContentView: View {
     /// 快捷键提示文本——读 KeyboardShortcuts 当前设置，用户改了立刻反映。
     /// 用 @State 缓存，应用激活时刷新。
     @State private var shortcutHint: String = ContentView.currentShortcutHint()
+    @State private var settingsHovering = false
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Vigil")
-                .font(.system(size: 28, weight: .bold))
-            Text(shortcutHint)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Vigil")
+                    .font(.system(size: 28, weight: .bold))
+                Text(shortcutHint)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 12)
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .font(.title2)
+                    .foregroundStyle(settingsHovering ? .primary : .secondary)
+                    .padding(6)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .help("设置 (⌘,)")
+            .onHover { settingsHovering = $0 }
         }
         .onReceive(
             NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
@@ -66,9 +82,42 @@ struct ContentView: View {
 
     private static func currentShortcutHint() -> String {
         if let s = KeyboardShortcuts.getShortcut(for: .startPromise) {
-            return "点「开始专注」或按 \(s) 弹出输入框"
+            // KeyboardShortcuts.Shortcut.description 内部按系统 keyboard locale 生成（如
+            // 中文 macOS 把 space 显示成 "空格"）。包没有 API 改 locale，所以这里在
+            // App 当前语言 = en 时手动把已知的中文按键名换成英文，保证 UI 一致。
+            return L("点「开始专注」或按 %@ 弹出输入框",
+                     args: localizeShortcutString("\(s)") as CVarArg)
         }
-        return "点「开始专注」弹出输入框（可在设置里绑快捷键）"
+        return L("点「开始专注」弹出输入框（可在设置里绑快捷键）")
+    }
+
+    /// 修正 KeyboardShortcuts.Shortcut 的中文按键描述 → 英文。
+    /// 当 App 当前语言是英文但系统 keyboard 是中文时（".space" 在中文 macOS 描述成 "空格"），
+    /// 把已知的中英映射应用一遍。modifier 符号（^⌘⌥⇧）跨语言一致，不动。
+    private static func localizeShortcutString(_ raw: String) -> String {
+        let lang = LocalizationManager.effectiveLanguageFromDefaults()
+        guard lang == .en else { return raw }
+        let zhToEn: [String: String] = [
+            "空格": "Space",
+            "回车": "Return",
+            "删除": "Delete",
+            "退格": "Backspace",
+            "退出键": "Esc",
+            "Tab键": "Tab",
+            "上箭头": "Up",
+            "下箭头": "Down",
+            "左箭头": "Left",
+            "右箭头": "Right",
+            "Home键": "Home",
+            "End键": "End",
+            "上翻页": "PgUp",
+            "下翻页": "PgDn"
+        ]
+        var out = raw
+        for (zh, en) in zhToEn {
+            out = out.replacingOccurrences(of: zh, with: en)
+        }
+        return out
     }
 
     // MARK: - Phase 区域
@@ -162,9 +211,18 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 levelBadge(r.level)
-                Text(r.reasoning.isEmpty ? "(无 AI 推理)" : r.reasoning)
-                    .font(.callout)
-                    .lineLimit(2)
+                // 拆开 if/else：原来 `Text(cond ? "中文" : variable)` 会让 SwiftUI 把整体推断成
+                // Text(String)，走 verbatim 不本地化。reasoning 是用户/AI 字符串不本地化，
+                // fallback 那个"(无 AI 推理)"要走 LocalizedStringKey 自动翻译。
+                if r.reasoning.isEmpty {
+                    Text("(无 AI 推理)")
+                        .font(.callout)
+                        .lineLimit(2)
+                } else {
+                    Text(r.reasoning)
+                        .font(.callout)
+                        .lineLimit(2)
+                }
             }
             HStack(spacing: 12) {
                 Text("\(r.frontAppName)")
@@ -307,10 +365,10 @@ struct ContentView: View {
                 height: 12
             )
             HStack(spacing: 14) {
-                ratioLegend(.green, "专注", s.fullyRatio)
-                ratioLegend(.yellow, "走神", s.wanderingRatio)
-                ratioLegend(.red, "分心", s.distractedRatio)
-                ratioLegend(.gray, "空闲", s.idleRatio)
+                ratioLegend(.green, FocusLevel.fully.displayName, s.fullyRatio)
+                ratioLegend(.yellow, FocusLevel.wandering.displayName, s.wanderingRatio)
+                ratioLegend(.red, FocusLevel.distracted.displayName, s.distractedRatio)
+                ratioLegend(.gray, FocusLevel.idle.displayName, s.idleRatio)
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
@@ -320,7 +378,9 @@ struct ContentView: View {
     private func ratioLegend(_ color: Color, _ label: String, _ ratio: Double) -> some View {
         HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
-            Text("\(label) \(Int(ratio * 100))%")
+            // label 已经是本地化字符串（FocusLevel.displayName 走 L()），用 verbatim 防止
+            // SwiftUI 把整体当 LocalizedStringKey "%@ %lld%%" 去查找（xcstrings 没这个 key）
+            Text(verbatim: "\(label) \(Int(ratio * 100))%")
         }
     }
 
@@ -381,7 +441,7 @@ struct ContentView: View {
                             Spacer()
                             Text("\(s.actualDuration / 60) min")
                                 .font(.caption).foregroundStyle(.secondary)
-                            Text(s.startedAt.formatted(date: .abbreviated, time: .shortened))
+                            Text(s.startedAt.formatted(.dateTime.locale(locale).year().month().day().hour().minute()))
                                 .font(.caption).foregroundStyle(.tertiary)
                             Image(systemName: "chevron.right")
                                 .font(.caption2)
@@ -402,10 +462,15 @@ struct ContentView: View {
                         HStack(spacing: 4) {
                             Image(systemName: historyExpanded ? "chevron.up" : "chevron.down")
                                 .font(.caption2)
-                            Text(historyExpanded
-                                 ? "收起"
-                                 : "展开全部（还有 \(sessions.count - Self.historyCollapsedLimit) 条）")
-                                .font(.caption)
+                            // 拆三元保留 LocalizedStringKey 路径
+                            Group {
+                                if historyExpanded {
+                                    Text("收起")
+                                } else {
+                                    Text("展开全部（还有 \(sessions.count - Self.historyCollapsedLimit) 条）")
+                                }
+                            }
+                            .font(.caption)
                         }
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
@@ -417,9 +482,14 @@ struct ContentView: View {
             }
         }
         .sheet(item: $selectedSession) { s in
+            // sheet 在 macOS SwiftUI 上是独立窗口，不继承父视图的 environment。
+            // 显式注入 locale + LocalizationManager，否则 SessionDetailView 里
+            // 所有 Text(LocalizedStringKey) 回退到系统 locale，显示中文。
             SessionDetailView(session: s) {
                 selectedSession = nil
             }
+            .environment(\.locale, LocalizationManager.shared.language.locale)
+            .environmentObject(LocalizationManager.shared)
         }
     }
 

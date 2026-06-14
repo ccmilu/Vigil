@@ -1,6 +1,6 @@
 import XCTest
 import CoreGraphics
-@testable import Focus
+@testable import Vigil
 
 final class DHashComputerTests: XCTestCase {
 

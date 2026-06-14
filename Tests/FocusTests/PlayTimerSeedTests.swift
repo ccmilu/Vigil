@@ -1,6 +1,6 @@
 import XCTest
 import SwiftData
-@testable import Focus
+@testable import Vigil
 
 @MainActor
 final class PlayTimerSeedTests: XCTestCase {

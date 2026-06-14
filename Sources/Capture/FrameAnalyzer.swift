@@ -29,6 +29,9 @@ actor FrameAnalyzer {
 
     /// 上层喂入的会话上下文（promise + 是否暂停等），用 actor 内部状态隔离。
     private var currentPromise: String
+    /// 本 session 整段持续使用的 AI 回复语言（在 start 时由 SessionManager 快照），
+    /// 即使用户中途在 Settings 改语言也不影响进行中 session 的 AI 输出风格。
+    private let responseLanguage: String
 
     init(
         service: AIService,
@@ -36,7 +39,8 @@ actor FrameAnalyzer {
         config: CaptureConfig = .default,
         sessionID: UUID,
         promise: String,
-        diagnosticLogURL: URL
+        diagnosticLogURL: URL,
+        responseLanguage: String = kDefaultAIResponseLanguage
     ) {
         self.service = service
         self.capture = capture
@@ -44,6 +48,7 @@ actor FrameAnalyzer {
         self.sessionID = sessionID
         self.currentPromise = promise
         self.diagnosticLogURL = diagnosticLogURL
+        self.responseLanguage = responseLanguage
     }
 
     func setPromise(_ p: String) { currentPromise = p }
@@ -122,13 +127,14 @@ actor FrameAnalyzer {
             // 任务级硬超时（取自 config，可在 Settings 调）。
             let hardTimeout = config.aiHardTimeout
             let result = try await withThrowingTaskGroup(of: FrameAnalysis.self) { group in
-                group.addTask { [service, currentPromise, front, jpeg] in
+                group.addTask { [service, currentPromise, front, jpeg, responseLanguage] in
                     try await service.analyzeFrame(
                         FrameAnalysisInput(
                             promise: currentPromise,
                             appName: front.appName,
                             windowTitles: front.windowTitles,
-                            screenshotJPEG: jpeg
+                            screenshotJPEG: jpeg,
+                            responseLanguage: responseLanguage
                         )
                     )
                 }

@@ -7,6 +7,8 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
+            GeneralTab()
+                .tabItem { Label("通用", systemImage: "gearshape") }
             ShortcutsTab()
                 .tabItem { Label("快捷键", systemImage: "keyboard") }
             ProvidersTab(store: store)
@@ -57,6 +59,42 @@ private struct VisualEffectBlur: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blendingMode
+    }
+}
+
+/// 通用设置：界面语言（同时也是 AI 回复语言）。
+/// 用户切换后：
+/// - SwiftUI 视图通过 LocalizationManager 的 @Published 触发 redraw
+/// - 顶层 environment(\.locale) 也跟随刷新（FocusApp 里注入）
+/// - 菜单栏 / 通知下次构造时拿新 bundle（current AppKit code 都现读 L()，自动跟）
+/// - 进行中的 session 仍用 start 时快照的语言（避免 AI 输出语言突变）
+private struct GeneralTab: View {
+    @ObservedObject private var localizer = LocalizationManager.shared
+
+    var body: some View {
+        Form {
+            Section("界面语言") {
+                Picker(selection: Binding(
+                    get: { localizer.language },
+                    set: { localizer.setLanguage($0) }
+                )) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        // displayName 故意不本地化（每种语言显示自己的名字），让用户在任何
+                        // 当前语言下都能识别可选项
+                        Text(verbatim: lang.displayName).tag(lang)
+                    }
+                } label: {
+                    Text("语言")
+                }
+                .pickerStyle(.inline)
+
+                Text("界面文案与 AI 反馈都会跟随这个语言。默认跟随系统设置。\n切换后菜单栏与通知会在下次构造时刷新；主界面立即生效。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.bottom, 8)
     }
 }
 
@@ -574,11 +612,11 @@ struct ProvidersTab: View {
                         self.testResult = nil
                     },
                     onTest: { p in
-                        testResult = "连通测试中…"
+                        testResult = L("连通测试中…")
                         Task { testResult = await testConnectivity(p) }
                     },
                     onTestVision: { p in
-                        testResult = "视觉测试中（约 5-15s）…"
+                        testResult = L("视觉测试中（约 5-15s）…")
                         Task { testResult = await testVision(p) }
                     }
                 )
@@ -644,7 +682,7 @@ struct ProvidersTab: View {
     private func testConnectivity(_ p: AIProvider) async -> String {
         do {
             _ = try await p.makeService().analyzeTask("ping connection test")
-            return "✓ 连通；模型 \(p.model) 响应正常"
+            return L("✓ 连通；模型 %@ 响应正常", args: p.model as CVarArg)
         } catch {
             return "✗ \(error.localizedDescription)"
         }
@@ -652,7 +690,7 @@ struct ProvidersTab: View {
 
     private func testVision(_ p: AIProvider) async -> String {
         guard let svc = p.makeService() as? OpenAICompatibleService else {
-            return "✗ 当前 provider 不支持视觉测试"
+            return L("✗ 当前 provider 不支持视觉测试")
         }
         do {
             let mgr = ScreenCaptureManager()
@@ -665,10 +703,12 @@ struct ProvidersTab: View {
 
             let answer = try await svc.describeImage(jpeg)
             let trimmed = answer.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.contains("没有看到图片") || trimmed.contains("看不到") {
-                return "✗ 模型回复看不到图片——可能不是多模态，或没加载视觉权重。\n原回复：\(trimmed)"
+            // "没有看到图片" / "看不到" 是 describeImage 的固定中文 fallback 文案，
+            // 与界面语言无关——这里只是用来识别"模型说看不到图"。
+            if trimmed.contains("没有看到图片") || trimmed.contains("看不到") || trimmed.lowercased().contains("can't see") {
+                return L("✗ 模型回复看不到图片——可能不是多模态，或没加载视觉权重。\n原回复：%@", args: trimmed as CVarArg)
             }
-            return "✓ 模型确实收到了图片，描述：\n\(trimmed)"
+            return L("✓ 模型确实收到了图片，描述：\n%@", args: trimmed as CVarArg)
         } catch {
             return "✗ \(error.localizedDescription)"
         }

@@ -110,7 +110,7 @@ final class PromisePanelWindow: NSPanel {
             backing: .buffered,
             defer: false
         )
-        title = "这次专注做什么？"
+        title = L("这次专注做什么？")
         isFloatingPanel = true
         level = .floating
         titlebarAppearsTransparent = true
@@ -126,12 +126,18 @@ final class PromisePanelWindow: NSPanel {
 
         // 注入 modelContainer，使 PromisePanelContent 内的 @Query 能访问 SwiftData 上下文。
         // NSPanel 不在 WindowGroup 内，需手动注入；使用 AppContainer.shared 单例。
+        // 同时注入 environment(\.locale) + LocalizationManager —— NSHostingController 不在
+        // FocusApp WindowGroup 子树内，不会继承外层的 locale，里面的 SwiftUI Text 会回退到
+        // 系统 locale 而非用户在 Settings 选的语言。
+        let lang = LocalizationManager.shared.language
         contentViewController = NSHostingController(
             rootView: PromisePanelContent(sessionMgr: sessionMgr, dismiss: { [weak self] in
                 self?.close()
             })
             .background(.thinMaterial)
             .modelContainer(AppContainer.shared)
+            .environment(\.locale, lang.locale)
+            .environmentObject(LocalizationManager.shared)
         )
     }
     override func close() {

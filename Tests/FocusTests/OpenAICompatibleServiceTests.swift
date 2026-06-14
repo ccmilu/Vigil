@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 /// 单元测试：用自定义 URLProtocol 拦截 URLSession 请求，
 /// 不依赖网络也不依赖 LM Studio 是否在线。

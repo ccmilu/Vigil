@@ -1,6 +1,6 @@
 import XCTest
 import SwiftData
-@testable import Focus
+@testable import Vigil
 
 // MARK: - 视角 A：极端时序 / 恶意用户
 
@@ -573,7 +573,7 @@ final class CrossValidation_ViewE_PhaseGuardTests: XCTestCase {
         let mgr = FocusSessionManager(
             modelContainer: container,
             settings: AppSettings.shared,
-            serviceFactory: { _ in
+            serviceFactory: { _, _ in
                 factoryCallCount += 1
                 return MockAIService(level: .fully)
             }

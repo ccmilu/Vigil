@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 /// 验证 NotchTimer.islandGeometry 的 single source 行为：
 /// 折叠 / 展开尺寸与 NotchStyle 参数一致，且 currentIslandRect 与 geometry 保持对齐。

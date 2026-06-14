@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 final class StreakUpdaterTests: XCTestCase {
 

@@ -9,12 +9,13 @@ enum SessionStatus: String, Codable, Sendable {
     case manualCompleted
     case abandoned
 
+    /// 本地化展示名。语言由 LocalizationManager 当前值决定（用户在 Settings 切换后即时生效）。
     var displayName: String {
         switch self {
-        case .running:         return "进行中"
-        case .autoCompleted:   return "已完成"
-        case .manualCompleted: return "手动结束"
-        case .abandoned:       return "已放弃"
+        case .running:         return L("进行中")
+        case .autoCompleted:   return L("已完成")
+        case .manualCompleted: return L("手动结束")
+        case .abandoned:       return L("已放弃")
         }
     }
 }
@@ -25,12 +26,13 @@ enum FocusLevel: String, Codable, Sendable {
     case distracted
     case idle
 
+    /// 本地化展示名。语言由 LocalizationManager 当前值决定（用户在 Settings 切换后即时生效）。
     var displayName: String {
         switch self {
-        case .fully:      return "专注"
-        case .wandering:  return "走神"
-        case .distracted: return "分心"
-        case .idle:       return "空闲"
+        case .fully:      return L("专注")
+        case .wandering:  return L("走神")
+        case .distracted: return L("分心")
+        case .idle:       return L("空闲")
         }
     }
 }

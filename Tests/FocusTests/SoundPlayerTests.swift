@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 /// SoundPlayer 单元测试。
 /// 注意：NSSound 需要音频硬件 / 系统音频资源，在 CI headless 环境可能找不到系统音文件，

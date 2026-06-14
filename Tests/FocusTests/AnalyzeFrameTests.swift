@@ -1,5 +1,5 @@
 import XCTest
-@testable import Focus
+@testable import Vigil
 
 /// 验证 analyzeFrame / summarize 的请求格式与响应解析。
 final class AnalyzeFrameTests: XCTestCase {

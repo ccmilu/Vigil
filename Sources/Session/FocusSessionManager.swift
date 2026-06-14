@@ -39,12 +39,18 @@ final class FocusSessionManager: ObservableObject {
     @Published private(set) var lastAnalysis: AnalysisRecord?
 
     private let modelContainer: ModelContainer
-    private let serviceFactory: @MainActor (AIDebugSink?) -> AIService
+    /// 闭包接 (debugSink, responseLanguage) 返回 service——
+    /// 让 service 在构造时就知道用哪种语言回复 analyzeTask（无 input struct 可传）。
+    /// SessionManager 起 session 时把当前 LocalizationManager 的语言快照传进来。
+    private let serviceFactory: @MainActor (AIDebugSink?, String) -> AIService
     /// internal 以便 @testable import 测试验证 F11（convenience init 使用 AppSettings.shared）
     let settings: AppSettings
     private var service: AIService
     private var analyzer: FrameAnalyzer?
     private var session: FocusSession?
+    /// 当前活跃 session 起始时快照的 AI 回复语言；endSession 构造 SummaryInput 时复用。
+    /// 中途用户在 Settings 切语言不影响本 session（避免 AI 输出语言突变）。
+    private var activeResponseLanguage: String = kDefaultAIResponseLanguage
 
     private var timer: Timer?
     private var tickTimer: Timer?
@@ -83,14 +89,14 @@ final class FocusSessionManager: ObservableObject {
     init(
         modelContainer: ModelContainer,
         settings: AppSettings = AppSettings(),
-        serviceFactory: @escaping @MainActor (AIDebugSink?) -> AIService = { sink in
-            OpenAICompatibleService(debugSink: sink)
+        serviceFactory: @escaping @MainActor (AIDebugSink?, String) -> AIService = { sink, lang in
+            OpenAICompatibleService(debugSink: sink, responseLanguage: lang)
         }
     ) {
         self.modelContainer = modelContainer
         self.settings = settings
         self.serviceFactory = serviceFactory
-        self.service = serviceFactory(nil)
+        self.service = serviceFactory(nil, kDefaultAIResponseLanguage)
     }
 
     /// 测试便捷构造器：直接注入固定 service。
@@ -103,7 +109,7 @@ final class FocusSessionManager: ObservableObject {
         self.init(
             modelContainer: modelContainer,
             settings: AppSettings.shared,
-            serviceFactory: { _ in service }
+            serviceFactory: { _, _ in service }
         )
     }
 
@@ -173,8 +179,9 @@ final class FocusSessionManager: ObservableObject {
             let ts = Int(Date().timeIntervalSince1970)
             return AIDebugSink(url: dir.appendingPathComponent("promise-\(ts).jsonl"))
         }()
-        // 构造一次性的临时 service，不覆写 self.service
-        let tempService = serviceFactory(validationSink)
+        // 构造一次性的临时 service，不覆写 self.service。
+        // 用 LocalizationManager 当前语言（用户在 PromisePanel 看到的就该是这个）
+        let tempService = serviceFactory(validationSink, LocalizationManager.promptLanguageName)
         do {
             let result = try await tempService.analyzeTask(promise)
             if let s = result.suggestion, !s.isEmpty {
@@ -219,8 +226,10 @@ final class FocusSessionManager: ObservableObject {
         let debugSink: AIDebugSink? = settings.debugEnabled
             ? AIDebugSink(url: sessionDir.appendingPathComponent("prompts.jsonl"))
             : nil
+        // 快照本 session 整段使用的 AI 回复语言；中途用户改语言不影响进行中 session。
+        self.activeResponseLanguage = LocalizationManager.promptLanguageName
         // 每次起 session 都重新拿 service（用户可能在 Settings 换了 provider）
-        self.service = serviceFactory(debugSink)
+        self.service = serviceFactory(debugSink, activeResponseLanguage)
 
         // 起 FrameAnalyzer
         self.activeCaptureConfig = settings.makeCaptureConfig()
@@ -230,7 +239,8 @@ final class FocusSessionManager: ObservableObject {
             config: activeCaptureConfig,
             sessionID: s.id,
             promise: promise,
-            diagnosticLogURL: logURL
+            diagnosticLogURL: logURL,
+            responseLanguage: activeResponseLanguage
         )
 
         startCountdown(durationSeconds: durationSeconds)
@@ -319,13 +329,17 @@ final class FocusSessionManager: ObservableObject {
                     wanderingSec: Int(wandering),
                     distractedSec: Int(distracted),
                     idleSec: Int(idle),
-                    distractedNotes: distractedNotes
+                    distractedNotes: distractedNotes,
+                    responseLanguage: activeResponseLanguage
                 )
             )
             s.summary = text
         } catch {
             logger.warning("summarize 失败：\(error.localizedDescription)")
-            s.summary = "(AI 复盘失败：\(error.localizedDescription))"
+            s.summary = String(
+                format: L("(AI 复盘失败：%@)"),
+                error.localizedDescription
+            )
         }
         try? ctx.save()
 

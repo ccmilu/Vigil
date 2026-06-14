@@ -134,12 +134,19 @@ private struct DistractOverlayView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
 
-                Text(reminder.isEmpty ? "似乎偏离了承诺。回到正事？" : reminder)
-                    .font(.system(size: 20, weight: .medium))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: 640)
+                // 拆三元：原写法 SwiftUI 推断成 Text(String)，"似乎偏离了承诺..." 不本地化
+                Group {
+                    if reminder.isEmpty {
+                        Text("似乎偏离了承诺。回到正事？")
+                    } else {
+                        Text(reminder)
+                    }
+                }
+                .font(.system(size: 20, weight: .medium))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 8)
+                .frame(maxWidth: 640)
 
                 Button {
                     onDismiss()

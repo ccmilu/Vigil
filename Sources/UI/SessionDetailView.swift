@@ -8,6 +8,8 @@ struct SessionDetailView: View {
     let onClose: () -> Void
 
     @State private var previewURL: URL?
+    /// 详情页头部 + 每条 record 时间的格式跟随用户语言
+    @Environment(\.locale) private var locale
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -50,7 +52,7 @@ struct SessionDetailView: View {
                     "\(session.actualDuration / 60) 分 \(session.actualDuration % 60) 秒",
                     systemImage: "clock"
                 )
-                Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                Text(session.startedAt.formatted(.dateTime.locale(locale).year().month().day().hour().minute()))
                 Text(session.status.displayName)
                     .font(.caption.bold())
                     .padding(.horizontal, 6).padding(.vertical, 2)
@@ -86,7 +88,8 @@ struct SessionDetailView: View {
     private func legend(color: Color, label: String, ratio: Double) -> some View {
         HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8)
-            Text("\(label) \(Int(ratio * 100))%")
+            // label 已 L() 本地化，verbatim 避免 SwiftUI 当 LocalizedStringKey "%@ %lld%%"
+            Text(verbatim: "\(label) \(Int(ratio * 100))%")
         }
     }
 
@@ -118,15 +121,19 @@ struct SessionDetailView: View {
                     .clipShape(.rect(cornerRadius: 3))
             }
 
-            Text(r.createdAt.formatted(.dateTime.hour().minute().second()))
+            Text(r.createdAt.formatted(.dateTime.locale(locale).hour().minute().second()))
                 .font(.caption.monospaced())
                 .foregroundStyle(.tertiary)
                 .frame(width: 70, alignment: .leading)
             levelBadge(r.level)
                 .frame(width: 80, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text(r.reasoning.isEmpty ? "(无 AI 推理)" : r.reasoning)
-                    .font(.callout)
+                // 拆三元：见 ContentView 同样修复
+                if r.reasoning.isEmpty {
+                    Text("(无 AI 推理)").font(.callout)
+                } else {
+                    Text(r.reasoning).font(.callout)
+                }
                 if !r.frontAppName.isEmpty {
                     Text(r.frontAppName)
                         .font(.caption2)
@@ -139,11 +146,14 @@ struct SessionDetailView: View {
                     .font(.caption2.monospaced())
                     .foregroundStyle(.tertiary)
             }
-            Text(r.fromAI ? "AI" : "复用")
-                .font(.caption2.bold())
-                .padding(.horizontal, 5).padding(.vertical, 1)
-                .background(r.fromAI ? Color.blue.opacity(0.15) : Color.gray.opacity(0.15))
-                .clipShape(.capsule)
+            // 拆三元让 LocalizedStringKey 走对路径（不然推断为 Text(String) verbatim）
+            Group {
+                if r.fromAI { Text("AI") } else { Text("复用") }
+            }
+            .font(.caption2.bold())
+            .padding(.horizontal, 5).padding(.vertical, 1)
+            .background(r.fromAI ? Color.blue.opacity(0.15) : Color.gray.opacity(0.15))
+            .clipShape(.capsule)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
