@@ -14,7 +14,8 @@
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/ccmilu/Vigil?style=social)](https://github.com/ccmilu/Vigil/stargazers)
 
-[English](README.en.md) · 简体中文
+<a href="README.en.md"><img alt="English" height="32" src="https://img.shields.io/badge/English-lightgrey?style=for-the-badge"></a>
+<a href="README.md"><img alt="简体中文" height="32" src="https://img.shields.io/badge/简_体_中_文-blue?style=for-the-badge"></a>
 
 </div>
 
