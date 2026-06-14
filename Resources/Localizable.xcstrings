@@ -23,6 +23,16 @@
         }
       }
     },
+    "（这一版本暂无更新说明）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(No release notes for this version)"
+          }
+        }
+      }
+    },
     "%@" : {
 
     },
@@ -37,9 +47,6 @@
       }
     },
     "%@ min" : {
-
-    },
-    "%@/<sessionUUID>/diagnostic.jsonl" : {
 
     },
     "%@%%" : {
@@ -158,6 +165,16 @@
         }
       }
     },
+    "AI 守护你的专注。写下承诺，AI 实时分析屏幕，温柔提醒你回到正事上。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI guards your focus. Write a commitment; the AI analyzes your screen in real time and gently nudges you back to what matters."
+          }
+        }
+      }
+    },
     "AI 服务" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -185,6 +202,27 @@
     },
     "dHash=%@" : {
 
+    },
+    "Finder 已经为你弹出 dmg 窗口。拖动完成后请退出当前 Vigil 再启动新版本。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finder has opened the dmg window. After dragging, please quit the current Vigil and launch the new version."
+          }
+        }
+      }
+    },
+    "GitHub 返回 HTTP %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub returned HTTP %lld"
+          }
+        }
+      }
     },
     "idle 持续多久才开始提醒。默认 120s。" : {
       "extractionState" : "manual",
@@ -230,6 +268,17 @@
         }
       }
     },
+    "Star on GitHub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Star on GitHub"
+          }
+        }
+      }
+    },
     "Vigil" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -259,6 +308,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vigil · click to start a focus session"
+          }
+        }
+      }
+    },
+    "Vigil %@ 已发布" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vigil %@ Available"
+          }
+        }
+      }
+    },
+    "Vigil 是个人维护的开源项目。如果它对你有帮助，请点一下 Star ❤️——这是对独立开发者最大的鼓励，也能让更多人发现它。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vigil is an open-source project maintained by an individual. If you find it helpful, please give it a Star ❤️ — it's the best encouragement for an indie developer and helps others discover it."
           }
         }
       }
@@ -307,6 +376,17 @@
         }
       }
     },
+    "上次检查" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Checked"
+          }
+        }
+      }
+    },
     "下一步" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -314,6 +394,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Next"
+          }
+        }
+      }
+    },
+    "下载完成，请把 Vigil 拖到 Applications 替换旧版本" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download complete. Drag Vigil to Applications to replace the old version."
           }
         }
       }
@@ -369,6 +460,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Start anyway (offline)"
+          }
+        }
+      }
+    },
+    "从未" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never"
           }
         }
       }
@@ -483,8 +585,36 @@
         }
       }
     },
+    "全局快捷键" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Global Shortcut"
+          }
+        }
+      }
+    },
+    "全部删除" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete All"
+          }
+        }
+      }
+    },
     "共 %@ 个文件 · %@" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ files · %@ total"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "new",
@@ -514,6 +644,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld total"
+          }
+        }
+      }
+    },
+    "关于 Vigil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Vigil"
           }
         }
       }
@@ -561,6 +702,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Longest: %lld days"
+          }
+        }
+      }
+    },
+    "写入下载文件失败：%@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to save downloaded file: %@"
           }
         }
       }
@@ -675,6 +827,27 @@
         }
       }
     },
+    "发布于 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Released %@"
+          }
+        }
+      }
+    },
+    "发现新版本 %@，将弹出更新窗口" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New version %@ found. The update window will appear."
+          }
+        }
+      }
+    },
     "取消" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -719,6 +892,16 @@
         }
       }
     },
+    "启用后，Vigil 在启动 5 秒后检查一次，并每 24 小时自动检查新版本。\n更新通过 GitHub Releases 推送，不会上传任何用户数据。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When enabled, Vigil checks 5 seconds after launch, then every 24 hours.\nUpdates are delivered via GitHub Releases. No user data is uploaded."
+          }
+        }
+      }
+    },
     "启用提示音" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -730,6 +913,17 @@
         }
       }
     },
+    "响应解析失败：%@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Response parsing failed: %@"
+          }
+        }
+      }
+    },
     "回来一下" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -737,6 +931,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Come back"
+          }
+        }
+      }
+    },
+    "国内访问 GitHub 经常卡顿。建议用浏览器直接下载——浏览器自带连接优化，成功率通常比 App 内下载高。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub downloads can be slow or fail from some regions. Opening in your browser usually works better — browsers come with built-in connection optimizations."
           }
         }
       }
@@ -865,6 +1069,17 @@
         }
       }
     },
+    "已是最新版本" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You're on the latest version"
+          }
+        }
+      }
+    },
     "已重置引导" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -949,6 +1164,44 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Current promise: %@"
+          }
+        }
+      }
+    },
+    "当前版本" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current Version"
+          }
+        }
+      }
+    },
+    "当前版本 %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current version %@"
+          }
+        }
+      }
+    },
+    "当前版本 %@ → %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current %@ → %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "当前版本 %1$@ → %2$@"
           }
         }
       }
@@ -1041,6 +1294,28 @@
         }
       }
     },
+    "打开 GitHub 仓库" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open GitHub Repo"
+          }
+        }
+      }
+    },
+    "打开 Release 页" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Release Page"
+          }
+        }
+      }
+    },
     "打开 sessions 目录" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1059,6 +1334,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open promise panel"
+          }
+        }
+      }
+    },
+    "打开承诺面板" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Promise Panel"
           }
         }
       }
@@ -1191,6 +1476,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No data"
+          }
+        }
+      }
+    },
+    "无法自动挂载 dmg，请从 %@ 手动打开" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not auto-mount dmg. Please open it manually from %@"
           }
         }
       }
@@ -1338,6 +1634,28 @@
         }
       }
     },
+    "根对象不是 JSON 字典" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Root object is not a JSON dictionary"
+          }
+        }
+      }
+    },
+    "检查失败：%@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check failed: %@"
+          }
+        }
+      }
+    },
     "检测到分心" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1360,6 +1678,36 @@
         }
       }
     },
+    "正在下载新版本…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading new version…"
+          }
+        }
+      }
+    },
+    "正在准备安装…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing to install…"
+          }
+        }
+      }
+    },
+    "正在检查…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking…"
+          }
+        }
+      }
+    },
     "正在生成复盘…" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1367,6 +1715,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Generating recap…"
+          }
+        }
+      }
+    },
+    "此操作不可撤销。历史 session 的截图与 diagnostic.jsonl 都会被删除。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This cannot be undone. Screenshots and diagnostic.jsonl from past sessions will be deleted."
           }
         }
       }
@@ -1389,6 +1747,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lighter than the distraction alert: yellow outline + 12s auto-hide, no sound or full-screen overlay."
+          }
+        }
+      }
+    },
+    "沙盒 App 的截图只能保存在 Container 内部目录；自定义路径需要 Security-Scoped Bookmark（v0.2 计划）。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sandboxed apps may only store screenshots inside their container directory. Custom paths require Security-Scoped Bookmarks (planned for v0.2)."
           }
         }
       }
@@ -1503,6 +1871,17 @@
         }
       }
     },
+    "用浏览器下载" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download in Browser"
+          }
+        }
+      }
+    },
     "画面变化阈值（dHash 汉明距离）" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1536,6 +1915,17 @@
         }
       }
     },
+    "确认清空所有截图与诊断日志？" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear all screenshots and diagnostic logs?"
+          }
+        }
+      }
+    },
     "视觉测试中（约 5-15s）…" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1543,6 +1933,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Testing vision (~5-15s)…"
+          }
+        }
+      }
+    },
+    "稍后再说" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
           }
         }
       }
@@ -1565,6 +1966,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Idle detection (how long without input counts as idle)"
+          }
+        }
+      }
+    },
+    "立即更新" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update Now"
+          }
+        }
+      }
+    },
+    "立即检查更新" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for Updates"
           }
         }
       }
@@ -1624,6 +2047,39 @@
         }
       }
     },
+    "缺失 tag_name 或解析失败" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missing or unparseable tag_name"
+          }
+        }
+      }
+    },
+    "自动更新" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic Updates"
+          }
+        }
+      }
+    },
+    "自动检查更新" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-check for Updates"
+          }
+        }
+      }
+    },
     "自定义" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1653,6 +2109,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diagnostic log (per-frame decisions)"
+          }
+        }
+      }
+    },
+    "该版本未上传 dmg 资源，请前往 Release 页手动下载" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No dmg asset for this release. Please download manually from the Release page."
           }
         }
       }
@@ -1910,6 +2377,17 @@
         }
       }
     },
+    "重试下载" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry Download"
+          }
+        }
+      }
+    },
     "长时间不在电脑前（idle）" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1972,6 +2450,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The overlay always shows the first time you become distracted; with this off, you won't be alerted again until you switch state."
+          }
+        }
+      }
+    },
+    "默认 ⇧⌘⌥Space。⌘⌥Space 默认被 Spotlight 占用。点击右侧按钮可重新录制。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default ⇧⌘⌥Space. ⌘⌥Space is reserved by Spotlight. Click the recorder on the right to rebind."
           }
         }
       }

@@ -12,6 +12,13 @@ final class AppSettings: ObservableObject {
     @AppStorage("capture.aiHardTimeoutSec") var aiHardTimeoutSec: Int = 30
     @AppStorage("debug.enabled") var debugEnabled: Bool = false
 
+    // MARK: 自动更新
+    /// 是否自动检查更新（启动 + 每 24h）。默认开。
+    @AppStorage("update.autoCheckEnabled") var autoCheckUpdates: Bool = true
+    /// 上次检查更新的 unix 时间戳（秒）。0 表示从未检查过。
+    /// 用 Double 而非 Date：@AppStorage 不直接支持 Date。
+    @AppStorage("update.lastCheckTimestamp") var lastUpdateCheckTimestamp: Double = 0
+
     // MARK: 三种提醒（distract / idle / wandering）
     /// distract 跳变后第一次必弹；之后是否每隔 N 秒持续提醒（用户没回来）
     @AppStorage("alert.distract.intervalEnabled") var distractIntervalEnabled: Bool = true

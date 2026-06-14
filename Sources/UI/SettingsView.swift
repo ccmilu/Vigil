@@ -9,8 +9,6 @@ struct SettingsView: View {
         TabView {
             GeneralTab()
                 .tabItem { Label("通用", systemImage: "gearshape") }
-            ShortcutsTab()
-                .tabItem { Label("快捷键", systemImage: "keyboard") }
             ProvidersTab(store: store)
                 .tabItem { Label("AI", systemImage: "brain") }
             CaptureTab(settings: settings)
@@ -19,14 +17,12 @@ struct SettingsView: View {
                 .tabItem { Label("提醒", systemImage: "bell.badge") }
             SoundTab()
                 .tabItem { Label("声音", systemImage: "speaker.wave.2") }
-            StorageTab()
-                .tabItem { Label("存储", systemImage: "externaldrive") }
             DebugTab(settings: settings)
                 .tabItem { Label("调试", systemImage: "ladybug") }
         }
         .frame(
-            minWidth: 520, idealWidth: 560, maxWidth: 600,
-            minHeight: 440, idealHeight: 480, maxHeight: 640
+            minWidth: 540, idealWidth: 580, maxWidth: 620,
+            minHeight: 460, idealHeight: 540, maxHeight: 720
         )
         // 在 tab bar 区域叠一层 withinWindow vibrancy，模糊同窗口内
         // 滚动到 tab bar 后面的内容（控制中心同款）。
@@ -62,39 +58,216 @@ private struct VisualEffectBlur: NSViewRepresentable {
     }
 }
 
-/// 通用设置：界面语言（同时也是 AI 回复语言）。
+/// 通用设置：语言 / 快捷键 / 自动更新 / 关于。
+///
+/// 「快捷键」和「关于」原本是独立的 tab，2026-06 合并进通用以减少 Tab 数量。
+private struct GeneralTab: View {
+    @ObservedObject private var localizer = LocalizationManager.shared
+    @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var updateService = UpdateService.shared
+
+    var body: some View {
+        Form {
+            // 关于放在最顶——打开设置时第一眼就是项目身份 + GitHub 引导
+            AboutSection()
+            LanguageSection(localizer: localizer)
+            ShortcutsSection()
+            UpdatesSection(settings: settings, updateService: updateService)
+        }
+        .formStyle(.grouped)
+        .padding(.bottom, 8)
+    }
+}
+
+/// 界面语言（同时也是 AI 回复语言）。
 /// 用户切换后：
 /// - SwiftUI 视图通过 LocalizationManager 的 @Published 触发 redraw
 /// - 顶层 environment(\.locale) 也跟随刷新（FocusApp 里注入）
 /// - 菜单栏 / 通知下次构造时拿新 bundle（current AppKit code 都现读 L()，自动跟）
 /// - 进行中的 session 仍用 start 时快照的语言（避免 AI 输出语言突变）
-private struct GeneralTab: View {
-    @ObservedObject private var localizer = LocalizationManager.shared
+private struct LanguageSection: View {
+    @ObservedObject var localizer: LocalizationManager
 
     var body: some View {
-        Form {
-            Section("界面语言") {
-                Picker(selection: Binding(
-                    get: { localizer.language },
-                    set: { localizer.setLanguage($0) }
-                )) {
-                    ForEach(AppLanguage.allCases) { lang in
-                        // displayName 故意不本地化（每种语言显示自己的名字），让用户在任何
-                        // 当前语言下都能识别可选项
-                        Text(verbatim: lang.displayName).tag(lang)
-                    }
-                } label: {
-                    Text("语言")
+        Section("界面语言") {
+            Picker(selection: Binding(
+                get: { localizer.language },
+                set: { localizer.setLanguage($0) }
+            )) {
+                ForEach(AppLanguage.allCases) { lang in
+                    // displayName 故意不本地化（每种语言显示自己的名字），让用户在任何
+                    // 当前语言下都能识别可选项
+                    Text(verbatim: lang.displayName).tag(lang)
                 }
-                .pickerStyle(.inline)
+            } label: {
+                Text("语言")
+            }
+            .pickerStyle(.inline)
 
-                Text("界面文案与 AI 反馈都会跟随这个语言。默认跟随系统设置。\n切换后菜单栏与通知会在下次构造时刷新；主界面立即生效。")
-                    .font(.caption2)
+            Text("界面文案与 AI 反馈都会跟随这个语言。默认跟随系统设置。\n切换后菜单栏与通知会在下次构造时刷新；主界面立即生效。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// 全局快捷键：⇧⌘⌥Space 打开承诺面板。
+/// KeyboardShortcuts.Recorder 自带录制 UI + 默认值还原。
+private struct ShortcutsSection: View {
+    var body: some View {
+        Section("全局快捷键") {
+            KeyboardShortcuts.Recorder(for: .startPromise) {
+                Text("打开承诺面板")
+            }
+            Text("默认 ⇧⌘⌥Space。⌘⌥Space 默认被 Spotlight 占用。点击右侧按钮可重新录制。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// 自动更新：开关 + 当前版本 + 上次检查时间 + 立即检查按钮。
+/// 启用时 App 启动 5s 后跑一次，并每 24h 重跑。
+private struct UpdatesSection: View {
+    @ObservedObject var settings: AppSettings
+    @ObservedObject var updateService: UpdateService
+    @State private var nowTick = Date()
+
+    /// 每分钟刷一次 "上次检查 xx 分钟前" 的相对时间显示。
+    private let tickTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        Section("自动更新") {
+            Toggle("自动检查更新", isOn: $settings.autoCheckUpdates)
+            Text("启用后，Vigil 在启动 5 秒后检查一次，并每 24 小时自动检查新版本。\n更新通过 GitHub Releases 推送，不会上传任何用户数据。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            LabeledContent("当前版本") {
+                Text(updateService.currentVersion().description)
+                    .font(.system(.callout, design: .monospaced))
+            }
+            LabeledContent("上次检查") {
+                Text(lastCheckText)
                     .foregroundStyle(.secondary)
+                    .font(.callout)
+            }
+
+            if let statusText {
+                Label(statusText, systemImage: statusIcon)
+                    .font(.caption)
+                    .foregroundStyle(statusColor)
+            }
+
+            HStack {
+                Spacer()
+                Button {
+                    updateService.manualCheck()
+                } label: {
+                    if isChecking {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("正在检查…")
+                        }
+                    } else {
+                        Label("立即检查更新", systemImage: "arrow.clockwise")
+                    }
+                }
+                .disabled(isChecking)
             }
         }
-        .formStyle(.grouped)
-        .padding(.bottom, 8)
+        .onReceive(tickTimer) { nowTick = $0 }
+    }
+
+    private var isChecking: Bool {
+        if case .checking = updateService.state { return true }
+        return false
+    }
+
+    private var lastCheckText: String {
+        _ = nowTick   // 触发依赖：Timer 的 Date 推送让 lastCheckText 重算
+        guard let date = updateService.lastCheckedAt else {
+            return L("从未")
+        }
+        let f = RelativeDateTimeFormatter()
+        // 显式用用户在 Settings 里选的语言，避免回退到 Locale.current
+        f.locale = LocalizationManager.shared.language.locale
+        f.unitsStyle = .abbreviated
+        return f.localizedString(for: date, relativeTo: Date())
+    }
+
+    /// 返回 LocalizedStringKey 以让 Label 走 SwiftUI 的自动本地化路径（key + 插值 → xcstrings 抽取）。
+    private var statusText: LocalizedStringKey? {
+        switch updateService.state {
+        case .idle, .checking: return nil
+        case .upToDate: return "已是最新版本"
+        case .available(let info): return "发现新版本 \(info.version.description)，将弹出更新窗口"
+        case .error(let msg, _): return "检查失败：\(msg)"
+        }
+    }
+
+    private var statusIcon: String {
+        switch updateService.state {
+        case .available: return "sparkles"
+        case .error: return "exclamationmark.triangle"
+        case .upToDate: return "checkmark.circle"
+        default: return "circle"
+        }
+    }
+
+    private var statusColor: Color {
+        switch updateService.state {
+        case .available: return .accentColor
+        case .error: return .red
+        case .upToDate: return .secondary
+        default: return .secondary
+        }
+    }
+}
+
+/// 关于 Vigil：App 图标 + 一句话简介 + GitHub 按钮 + 求 star 引导。
+private struct AboutSection: View {
+    static let githubURL = URL(string: "https://github.com/ccmilu/Vigil")!
+
+    var body: some View {
+        Section("关于 Vigil") {
+            HStack(alignment: .top, spacing: 14) {
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 56, height: 56)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Vigil")
+                        .font(.title3.weight(.semibold))
+                    Text("AI 守护你的专注。写下承诺，AI 实时分析屏幕，温柔提醒你回到正事上。")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 4)
+
+            HStack {
+                Button {
+                    NSWorkspace.shared.open(Self.githubURL)
+                } label: {
+                    Label("打开 GitHub 仓库", systemImage: "globe")
+                }
+                Spacer()
+                Button {
+                    NSWorkspace.shared.open(Self.githubURL)
+                } label: {
+                    Label("Star on GitHub", systemImage: "star.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.yellow)
+            }
+
+            Text("Vigil 是个人维护的开源项目。如果它对你有帮助，请点一下 Star ❤️——这是对独立开发者最大的鼓励，也能让更多人发现它。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -449,6 +622,9 @@ private struct DebugTab: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+
+            // "存储"从独立 tab 合并进调试（2026-06）
+            StorageSection()
         }
         .formStyle(.grouped)
         .alert("已重置引导", isPresented: $showRestartAlert) {
@@ -459,26 +635,25 @@ private struct DebugTab: View {
     }
 }
 
-private struct StorageTab: View {
+/// 截图与诊断日志的存储管理。原 StorageTab，2026-06 合并到调试 tab 的最后一个 Section。
+private struct StorageSection: View {
     private var screenshotsURL: URL { ScreenshotStore.rootDirectory }
     @State private var sizeBytes: Int64 = 0
     @State private var fileCount: Int = 0
+    @State private var showClearConfirm = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("截图与诊断日志")
-                .font(.headline)
-
+        Section("截图与诊断日志") {
             VStack(alignment: .leading, spacing: 6) {
                 Text("当前路径")
                     .font(.caption.smallCaps())
                     .foregroundStyle(.secondary)
                 Text(screenshotsURL.path)
-                    .font(.system(.callout, design: .monospaced))
+                    .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("沙盒 App 的截图必须保存在 Container 内部目录；自定义路径需要 v0.2 用 Security-Scoped Bookmarks 处理。")
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                Text("沙盒 App 的截图只能保存在 Container 内部目录；自定义路径需要 Security-Scoped Bookmark（v0.2 计划）。")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -492,34 +667,28 @@ private struct StorageTab: View {
                 Button("刷新统计") { refresh() }
                 Spacer()
                 Text("共 \(fileCount) 个文件 · \(formatBytes(sizeBytes))")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("诊断日志（每帧决策）")
-                    .font(.caption.smallCaps())
-                    .foregroundStyle(.secondary)
-                Text("每个 session 的 diagnostic.jsonl 写在该 session 的子目录里：")
-                    .font(.callout)
-                Text("\(screenshotsURL.path)/<sessionUUID>/diagnostic.jsonl")
-                    .font(.system(.caption, design: .monospaced))
-                    .textSelection(.enabled)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Spacer()
 
             HStack {
                 Spacer()
                 Button("清空所有截图", role: .destructive) {
-                    clearAll()
+                    showClearConfirm = true
                 }
             }
         }
-        .padding(20)
         .onAppear { refresh() }
+        .confirmationDialog(
+            "确认清空所有截图与诊断日志？",
+            isPresented: $showClearConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("全部删除", role: .destructive) { clearAll() }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("此操作不可撤销。历史 session 的截图与 diagnostic.jsonl 都会被删除。")
+        }
     }
 
     private func refresh() {
@@ -553,17 +722,6 @@ private struct StorageTab: View {
         f.allowedUnits = [.useMB, .useGB]
         f.countStyle = .file
         return f.string(fromByteCount: b)
-    }
-}
-
-private struct ShortcutsTab: View {
-    var body: some View {
-        Form {
-            KeyboardShortcuts.Recorder(for: .startPromise) {
-                Text("打开专注面板")
-            }
-        }
-        .padding(20)
     }
 }
 
