@@ -26,6 +26,13 @@ enum NotchStyle {
     /// 有刘海屏不用它——那里的"间距"是物理刘海宽度（+ collapsedMiddleExtra）。
     static let collapsedCompactGap: CGFloat = 8
 
+    /// 无刘海屏展开态宽度下限。
+    /// 无刘海公式 2×expandedSideExtension + compactGap 只有 228pt，
+    /// 展开态失去"刘海占位"这个宽度锚点，promise / reasoning 文字会被截断。
+    /// 与有刘海典型展开宽（刘海 220 + 两侧扩展 2×110 = 440）对齐：
+    /// 公式结果低于此值时抬到 440，给菜单栏下方内容区足够横向空间。
+    static let minExpandedWidthNoNotch: CGFloat = 440
+
     /// 折叠态圆环直径
     /// 视觉平衡：圆环 18 + level 图标 16，两侧观感等重；
     /// 旧值 22 + 14 偏向右重，环像耳坠左像针眼。
@@ -112,7 +119,8 @@ extension IslandGeometry {
     /// 有刘海分支公式与改版前 `NotchTimer.islandGeometry` 逐项相等（硬要求，
     /// NotchGeometryTests 原样通过即证据）；无刘海分支是新增的紧凑几何：
     /// - 折叠态宽 = sidePad + icon + compactGap + ring + sidePad（不留假刘海区）
-    /// - 展开态宽 = 2×expandedSideExtension + compactGap
+    /// - 展开态宽 = max(2×expandedSideExtension + compactGap, minExpandedWidthNoNotch)
+    ///   ——紧凑公式只有 228pt 会截断 promise/reasoning，用下限 440 锚住展开宽度
     static func compute(hasNotch: Bool, notchWidth: CGFloat, menuBarHeight: CGFloat) -> IslandGeometry {
         let collapsedW: CGFloat
         let collapsedH: CGFloat
@@ -133,7 +141,10 @@ extension IslandGeometry {
                 collapsedW = sidePad + NotchStyle.levelIconSize
                            + NotchStyle.collapsedCompactGap
                            + NotchStyle.progressRingSize + sidePad
-                expandedW = 2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap
+                // 展开态：紧凑公式（228）失去刘海占位这个宽度锚点，
+                // 用 minExpandedWidthNoNotch（440，对齐有刘海典型宽）兜底，避免内容截断
+                expandedW = max(2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap,
+                                NotchStyle.minExpandedWidthNoNotch)
             }
             // 折叠态高度跟随菜单栏；无菜单栏的副屏（罕见配置）回退 24 避免 0 高岛。
             // 有刘海 / 主屏 / 无头回退路径 menuBarHeight 恒 ≥ 24，max 不改变既有结果。

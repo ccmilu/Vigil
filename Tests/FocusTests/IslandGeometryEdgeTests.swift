@@ -114,11 +114,12 @@ final class IslandGeometryEdgeTests: XCTestCase {
     /// 字面量锚点则会在任何常量调整时立刻 fail——这是特性：
     /// fail 信息即"几何变了"，确认是有意调整视觉后更新锚点即可。
     /// 锚点推导（当前常量：topR=8 / bottomR=14 → sidePad=max(8,14)+6=20；
-    /// icon=16 / ring=18 / middleExtra=8 / ext=110 / compactGap=8 / expandedH=150）：
+    /// icon=16 / ring=18 / middleExtra=8 / ext=110 / compactGap=8 / expandedH=150 /
+    /// minExpandedWidthNoNotch=440）：
     /// - 有刘海折叠宽 = 20+16+(220+8)+18+20 = 302
     /// - 有刘海展开宽 = 220+2×110 = 440
     /// - 无刘海折叠宽 = 20+16+8+18+20 = 82
-    /// - 无刘海展开宽 = 2×110+8 = 228
+    /// - 无刘海展开宽 = max(2×110+8, 440) = 440（228 低于下限，被 minExpandedWidthNoNotch 抬起）
     func testNotchStyleConstantAnchors() {
         guard NotchStyle.autoDetect else { return }
 
@@ -132,9 +133,33 @@ final class IslandGeometryEdgeTests: XCTestCase {
         let compactGeo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
         XCTAssertEqual(compactGeo.collapsed.width, 82, accuracy: 0.01,
                        "锚点 fail = 常量改动：无刘海折叠宽 82 = 20+16+8+18+20")
-        XCTAssertEqual(compactGeo.expanded.width, 228, accuracy: 0.01,
-                       "锚点 fail = 常量改动：无刘海展开宽 228 = 2×110+8")
+        XCTAssertEqual(compactGeo.expanded.width, 440, accuracy: 0.01,
+                       "锚点 fail = 常量改动：无刘海展开宽 440 = max(2×110+8, 440)，下限生效")
         XCTAssertEqual(compactGeo.expanded.height, 150, accuracy: 0.01,
                        "锚点 fail = expandedHeight 常量改动（当前 150）")
+    }
+
+    // MARK: - 6. 无刘海展开态最小宽度下限（minExpandedWidthNoNotch）语义
+
+    /// Bug 锚点：无刘海外接显示器展开态曾只有 228pt（2×110+8），promise/reasoning 被截断。
+    /// 修复语义：无刘海展开宽 = max(2×ext + compactGap, minExpandedWidthNoNotch)，
+    /// 即"公式结果"与"下限"取大者；当前常量下 228 < 440，下限必须生效。
+    func testNoNotchExpandedWidth_floorSemantics() {
+        guard NotchStyle.autoDetect else { return }
+
+        let geo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
+        let formula = 2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap
+
+        XCTAssertEqual(geo.expanded.width,
+                       max(formula, NotchStyle.minExpandedWidthNoNotch),
+                       accuracy: 0.01,
+                       "无刘海展开宽应为 max(2×ext + compactGap, minExpandedWidthNoNotch)")
+        XCTAssertGreaterThanOrEqual(geo.expanded.width, NotchStyle.minExpandedWidthNoNotch,
+                                    "无刘海展开宽不得低于 minExpandedWidthNoNotch（440）")
+        XCTAssertGreaterThanOrEqual(geo.expanded.width, 440,
+                                    "回归锚点：无刘海展开宽至少 440（与有刘海典型展开宽对齐）")
+        // 当前常量下公式结果（228）确实低于下限——下限分支是活代码，不是死兜底
+        XCTAssertLessThan(formula, NotchStyle.minExpandedWidthNoNotch,
+                          "当前常量应触发下限分支；若常量调整使公式超过下限，本断言需同步复核")
     }
 }

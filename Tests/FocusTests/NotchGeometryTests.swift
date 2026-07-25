@@ -46,8 +46,9 @@ final class NotchGeometryTests: XCTestCase {
             // 有刘海 / 无头回退：notchWidth + 2×expandedSideExtension（无头时 notchWidth=220）
             expected = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
         } else {
-            // 无刘海主屏（如外接显示器为主屏）：2×ext + compactGap
-            expected = 2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap
+            // 无刘海主屏（如外接显示器为主屏）：max(2×ext + compactGap, minExpandedWidthNoNotch)
+            expected = max(2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap,
+                           NotchStyle.minExpandedWidthNoNotch)
         }
         XCTAssertEqual(geo.expanded.width, expected, accuracy: 0.01,
                        "autoDetect 展开态宽度公式应跟随主屏是否有刘海")
@@ -153,13 +154,15 @@ final class NotchGeometryTests: XCTestCase {
         XCTAssertFalse(geo.hasNotch, "hasNotch 字段应原样保留入参")
     }
 
-    /// 无刘海展开态宽 = 2×expandedSideExtension + compactGap
+    /// 无刘海展开态宽 = max(2×expandedSideExtension + compactGap, minExpandedWidthNoNotch)
+    /// （228pt 的紧凑公式会截断 promise/reasoning，下限与有刘海典型展开宽 440 对齐）
     func testNoNotchExpandedWidthFormula() {
         guard NotchStyle.autoDetect else { return }
         let geo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
-        let expected = 2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap
+        let expected = max(2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap,
+                           NotchStyle.minExpandedWidthNoNotch)
         XCTAssertEqual(geo.expanded.width, expected, accuracy: 0.01,
-                       "无刘海展开态宽度公式：2×ext + compactGap")
+                       "无刘海展开态宽度公式：max(2×ext + compactGap, minExpandedWidthNoNotch)")
     }
 
     /// 有刘海分支与改版前 islandGeometry 逐项相等（回归锚点）
