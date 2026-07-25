@@ -103,7 +103,12 @@ final class NotchIslandController: ObservableObject {
         // - scheduledTimer 默认只在 .default 跑，鼠标快速移动时会切到 .eventTracking，Timer 暂停
         // - 用 .common 包含 default + eventTracking + modal，任何模式都跑
         let t = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
-            self?.refreshHoverState()
+            // Timer 加到 RunLoop.main 的 .common mode，闭包必然在主线程 fire——
+            // 用 assumeIsolated 桥接 Swift 6 严格并发（闭包类型是 @Sendable nonisolated），
+            // 不引入 Task 跳转避免改变 0.05s 轮询的时序语义
+            MainActor.assumeIsolated {
+                self?.refreshHoverState()
+            }
         }
         RunLoop.main.add(t, forMode: .common)
         hoverPollTimer = t
