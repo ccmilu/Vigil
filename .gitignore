@@ -40,6 +40,7 @@ tmp/
 Sources/Config/LocalConfig.swift
 Config/Local.xcconfig
 CLAUDE.md
+AGENTS.md
 docs/*
 !docs/assets/
 !docs/screenshots/

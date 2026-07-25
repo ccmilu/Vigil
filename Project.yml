@@ -21,7 +21,7 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     CODE_SIGN_STYLE: Automatic
     CODE_SIGN_IDENTITY: "Apple Development"
-    MARKETING_VERSION: "0.1.1"
+    MARKETING_VERSION: "0.1.2"
     CURRENT_PROJECT_VERSION: "1"
 
 packages:
