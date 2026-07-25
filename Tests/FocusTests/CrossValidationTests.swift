@@ -190,7 +190,7 @@ final class CrossValidation_ViewB_MockLieTests: XCTestCase {
             promise: "写代码",
             appName: "Xcode",
             windowTitles: "Focus.swift",
-            screenshotJPEG: nil
+            screenshotJPEGs: []
         )
         do {
             _ = try await service.analyzeFrame(input)
@@ -226,7 +226,7 @@ final class CrossValidation_ViewB_MockLieTests: XCTestCase {
 
         let img = DHashComputerTests.gradientImage(width: 100, height: 50, reversed: false)
         let start = Date()
-        let result = await analyzer.tick(captureOverride: { img })
+        let result = await analyzer.tick(captureOverride: { single(img) })
         let elapsed = Date().timeIntervalSince(start)
 
         // 应在 1s 内因 hardTimeout 超时返回（实际 50ms，给 2s 余量）

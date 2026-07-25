@@ -54,16 +54,20 @@ struct OpenAICompatibleService: AIService {
         let user = PromptTemplates.analyzeFrameUser(
             promise: input.promise,
             appName: input.appName,
-            windowTitles: input.windowTitles
+            windowTitles: input.windowTitles,
+            screenshotCount: input.screenshotJPEGs.count
         )
         let raw = try await loggedChat(
             stage: "analyzeFrame",
-            system: system, user: user, hasImage: input.screenshotJPEG != nil
+            system: system, user: user, hasImage: !input.screenshotJPEGs.isEmpty
         ) {
-            if let jpeg = input.screenshotJPEG {
-                return try await chatVision(system: system, user: user, imageJPEG: jpeg, temperature: 0.3)
-            } else {
+            if input.screenshotJPEGs.isEmpty {
                 return try await chatText(system: system, user: user, temperature: 0.3)
+            } else {
+                return try await chatVision(
+                    system: system, user: user,
+                    imagesJPEG: input.screenshotJPEGs, temperature: 0.3
+                )
             }
         }
         return try Self.decode(FrameAnalysis.self, from: raw)
@@ -154,32 +158,49 @@ struct OpenAICompatibleService: AIService {
 
     // MARK: - Internal: 视觉 chat（含图片）
 
+    /// 单图视觉调用薄壳：保留旧签名（describeImage 等单图调用点不动），内部走多图实现。
     func chatVision(
         system: String,
         user: String,
         imageJPEG: Data,
         temperature: Double
     ) async throws -> String {
-        let base64 = imageJPEG.base64EncodedString()
-        let dataURL = "data:image/jpeg;base64,\(base64)"
+        try await chatVision(system: system, user: user, imagesJPEG: [imageJPEG], temperature: temperature)
+    }
 
-        var imageDict: [String: Any] = ["url": dataURL]
-        if !isLocalHost {
-            imageDict["detail"] = "low"  // 本地服务（LM Studio/Ollama）不识别此字段
+    /// 多图视觉调用：user content = [text] + N × image_url，每张独立 base64 data URL。
+    /// 图片顺序即显示器物理从左到右序（与 analyzeFrameUser 的"附 N 张截图"说明对应）。
+    func chatVision(
+        system: String,
+        user: String,
+        imagesJPEG: [Data],
+        temperature: Double
+    ) async throws -> String {
+        var userContent: [[String: Any]] = [["type": "text", "text": user]]
+        for jpeg in imagesJPEG {
+            userContent.append(["type": "image_url", "image_url": imageURLDict(for: jpeg)])
         }
 
         let body: [String: Any] = [
             "model": model,
             "messages": [
                 ["role": "system", "content": system],
-                ["role": "user", "content": [
-                    ["type": "text", "text": user],
-                    ["type": "image_url", "image_url": imageDict]
-                ]]
+                ["role": "user", "content": userContent]
             ],
             "temperature": temperature
         ]
         return try await sendChat(body: body)
+    }
+
+    /// 单张图的 image_url 字典：base64 data URL；`detail: "low"` 的本地 host 剥离逐张套用
+    /// （LM Studio / Ollama 不识别 detail 字段）。
+    private func imageURLDict(for jpeg: Data) -> [String: Any] {
+        let dataURL = "data:image/jpeg;base64,\(jpeg.base64EncodedString())"
+        var imageDict: [String: Any] = ["url": dataURL]
+        if !isLocalHost {
+            imageDict["detail"] = "low"
+        }
+        return imageDict
     }
 
     // MARK: - Internal: HTTP & 解析
@@ -226,6 +247,9 @@ struct OpenAICompatibleService: AIService {
     private var isLocalHost: Bool {
         guard let host = baseURL.host?.lowercased() else { return false }
         if host == "localhost" || host == "127.0.0.1" { return true }
+        // R3：IPv6 loopback。URL.host 对 http://[::1]:1234/v1 返回 "::1"（不含方括号），
+        // 带方括号形态一并收下，防未来 URL 解析行为差异
+        if host == "::1" || host == "[::1]" { return true }
         if host.hasPrefix("192.168.") { return true }
         if host.hasPrefix("10.") { return true }
         if host.hasSuffix(".local") { return true }

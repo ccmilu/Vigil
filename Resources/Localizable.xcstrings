@@ -1,2524 +1,2533 @@
 {
-  "sourceLanguage" : "zh-Hans",
-  "strings" : {
-    "(AI 复盘失败：%@)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(AI recap failed: %@)"
+  "sourceLanguage": "zh-Hans",
+  "strings": {
+    "%@": {},
+    "%@ min": {},
+    "%@ · %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
           }
         }
       }
     },
-    "(无 AI 推理)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(no AI reasoning)"
+    "%@%%": {},
+    "%@s": {},
+    "%lld 分 %lld 秒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldm %llds"
           }
         }
       }
     },
-    "(无键鼠操作，标记为空闲)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(no keyboard/mouse input, marked idle)"
+    "%lld 分钟": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
           }
         }
       }
     },
-    "（这一版本暂无更新说明）" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(No release notes for this version)"
+    "(AI 复盘失败：%@)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(AI recap failed: %@)"
           }
         }
       }
     },
-    "%@" : {
-
-    },
-    "%@ · %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@"
+    "(无 AI 推理)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(no AI reasoning)"
           }
         }
       }
     },
-    "%@ min" : {
-
-    },
-    "%@%%" : {
-
-    },
-    "%@s" : {
-
-    },
-    "%lld 分 %lld 秒" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lldm %llds"
+    "(无键鼠操作，标记为空闲)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(no keyboard/mouse input, marked idle)"
           }
         }
       }
     },
-    "%lld 分钟" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld min"
+    "256-bit 下经验值：15~30 微小变化，30~60 明显变化，60+ 大变化。默认 30。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rule of thumb at 256-bit: 15-30 = tiny change, 30-60 = noticeable, 60+ = major. Default 30."
           }
         }
       }
     },
-    "✓ 模型确实收到了图片，描述：\n%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✓ Model did receive the image; description:\n%@"
+    "AI": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
           }
         }
       }
     },
-    "✓ 连通；模型 %@ 响应正常" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✓ Connected; model %@ responded normally"
+    "AI 可能误判 · 本次分心不再提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI might be wrong · stop reminding for this streak"
           }
         }
       }
     },
-    "✗ 当前 provider 不支持视觉测试" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✗ This provider doesn't support vision testing"
+    "AI 含截图": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI with screenshot"
           }
         }
       }
     },
-    "✗ 模型回复看不到图片——可能不是多模态，或没加载视觉权重。\n原回复：%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✗ Model replied it can't see the image — likely not multimodal or vision weights aren't loaded.\nRaw reply: %@"
+    "AI 守护你的专注。写下承诺，AI 实时分析屏幕，温柔提醒你回到正事上。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI guards your focus. Write a commitment; the AI analyzes your screen in real time and gently nudges you back to what matters."
           }
         }
       }
     },
-    "256-bit 下经验值：15~30 微小变化，30~60 明显变化，60+ 大变化。默认 30。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rule of thumb at 256-bit: 15-30 = tiny change, 30-60 = noticeable, 60+ = major. Default 30."
+    "AI 服务": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Services"
           }
         }
       }
     },
-    "AI" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI"
+    "AI 调用熔断（单次最长等待）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI call timeout (max wait per call)"
           }
         }
       }
     },
-    "AI 可能误判 · 本次分心不再提醒" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI might be wrong · stop reminding for this streak"
+    "Finder 已经为你弹出 dmg 窗口。拖动完成后请退出当前 Vigil 再启动新版本。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder has opened the dmg window. After dragging, please quit the current Vigil and launch the new version."
           }
         }
       }
     },
-    "AI 含截图" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI with screenshot"
+    "GitHub 返回 HTTP %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub returned HTTP %lld"
           }
         }
       }
     },
-    "AI 守护你的专注。写下承诺，AI 实时分析屏幕，温柔提醒你回到正事上。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI guards your focus. Write a commitment; the AI analyzes your screen in real time and gently nudges you back to what matters."
+    "OpenAI 兼容": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI-compatible"
           }
         }
       }
     },
-    "AI 服务" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI Services"
+    "Star on GitHub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Star on GitHub"
           }
         }
       }
     },
-    "AI 调用熔断（单次最长等待）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI call timeout (max wait per call)"
+    "Vigil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigil"
           }
         }
       }
     },
-    "d=%@" : {
-
-    },
-    "dHash=%@" : {
-
-    },
-    "Finder 已经为你弹出 dmg 窗口。拖动完成后请退出当前 Vigil 再启动新版本。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finder has opened the dmg window. After dragging, please quit the current Vigil and launch the new version."
+    "Vigil %@ 已发布": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigil %@ Available"
           }
         }
       }
     },
-    "GitHub 返回 HTTP %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub returned HTTP %lld"
+    "Vigil · 拉你回来一下": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigil · pulling you back"
           }
         }
       }
     },
-    "idle 持续多久才开始提醒。默认 120s。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How long idle before the alert fires. Default 120s."
+    "Vigil · 点击开始一次专注": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigil · click to start a focus session"
           }
         }
       }
     },
-    "idle 持续期间每隔多少秒再播放一次提示音。默认 30s。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How often to replay the sound while you're still idle. Default 30s."
+    "Vigil 是个人维护的开源项目。如果它对你有帮助，请点一下 Star ❤️——这是对独立开发者最大的鼓励，也能让更多人发现它。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigil is an open-source project maintained by an individual. If you find it helpful, please give it a Star ❤️ — it's the best encouragement for an indie developer and helps others discover it."
           }
         }
       }
     },
-    "idle 持续过久时通过刘海岛 + 声音召回" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use the notch island + sound to nudge you back after a long idle"
+    "Vigil 需要定时截屏给 AI 分析，判断你是否在做承诺的事。截图本地保存，仅按你选择的服务发出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vigil needs to periodically capture your screen for AI to judge whether you're on task. Screenshots stay local and are only sent to the service you choose."
           }
         }
       }
     },
-    "OpenAI 兼容" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OpenAI-compatible"
+    "d=%@": {},
+    "dHash=%@": {},
+    "idle 持续多久才开始提醒。默认 120s。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How long idle before the alert fires. Default 120s."
           }
         }
       }
     },
-    "Star on GitHub" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Star on GitHub"
+    "idle 持续期间每隔多少秒再播放一次提示音。默认 30s。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How often to replay the sound while you're still idle. Default 30s."
           }
         }
       }
     },
-    "Vigil" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vigil"
+    "idle 持续过久时通过刘海岛 + 声音召回": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the notch island + sound to nudge you back after a long idle"
           }
         }
       }
     },
-    "Vigil · 拉你回来一下" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vigil · pulling you back"
+    "wandering 连续过久时弹刘海软提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show a soft notch reminder after sustained wandering"
           }
         }
       }
     },
-    "Vigil · 点击开始一次专注" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vigil · click to start a focus session"
+    "✓ 模型确实收到了图片，描述：\n%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Model did receive the image; description:\n%@"
           }
         }
       }
     },
-    "Vigil %@ 已发布" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vigil %@ Available"
+    "✓ 连通；模型 %@ 响应正常": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Connected; model %@ responded normally"
           }
         }
       }
     },
-    "Vigil 是个人维护的开源项目。如果它对你有帮助，请点一下 Star ❤️——这是对独立开发者最大的鼓励，也能让更多人发现它。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vigil is an open-source project maintained by an individual. If you find it helpful, please give it a Star ❤️ — it's the best encouragement for an indie developer and helps others discover it."
+    "✗ 当前 provider 不支持视觉测试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✗ This provider doesn't support vision testing"
           }
         }
       }
     },
-    "Vigil 需要定时截屏给 AI 分析，判断你是否在做承诺的事。截图本地保存，仅按你选择的服务发出。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vigil needs to periodically capture your screen for AI to judge whether you're on task. Screenshots stay local and are only sent to the service you choose."
+    "✗ 模型回复看不到图片——可能不是多模态，或没加载视觉权重。\n原回复：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✗ Model replied it can't see the image — likely not multimodal or vision weights aren't loaded.\nRaw reply: %@"
           }
         }
       }
     },
-    "wandering 连续过久时弹刘海软提醒" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show a soft notch reminder after sustained wandering"
+    "上一步": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
           }
         }
       }
     },
-    "上一步" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back"
+    "上次打卡": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last check-in"
           }
         }
       }
     },
-    "上次打卡" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last check-in"
+    "上次检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Checked"
           }
         }
       }
     },
-    "上次检查" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Last Checked"
+    "下一步": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
           }
         }
       }
     },
-    "下一步" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Next"
+    "下载完成，请把 Vigil 拖到 Applications 替换旧版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download complete. Drag Vigil to Applications to replace the old version."
           }
         }
       }
     },
-    "下载完成，请把 Vigil 拖到 Applications 替换旧版本" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download complete. Drag Vigil to Applications to replace the old version."
+    "专注": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Focused"
           }
         }
       }
     },
-    "专注" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Focused"
+    "专注完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session complete"
           }
         }
       }
     },
-    "专注完成" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Session complete"
+    "之前选过「不允许」。系统不会再弹原生授权框，请到系统设置 → 通知 → Vigil 手动开启。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You previously chose \"Don't Allow\". macOS won't prompt again — please enable it manually in System Settings → Notifications → Vigil."
           }
         }
       }
     },
-    "之前选过「不允许」。系统不会再弹原生授权框，请到系统设置 → 通知 → Vigil 手动开启。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You previously chose \"Don't Allow\". macOS won't prompt again — please enable it manually in System Settings → Notifications → Vigil."
+    "仍然开始": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start anyway"
           }
         }
       }
     },
-    "仍然开始" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start anyway"
+    "仍然开始（离线）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start anyway (offline)"
           }
         }
       }
     },
-    "仍然开始（离线）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start anyway (offline)"
+    "从未": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
           }
         }
       }
     },
-    "从未" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Never"
+    "从遮罩关闭瞬间起计算。默认 30s。第 3 次起遮罩多一个 \"AI 可能误判，本次不再提醒\" 按钮。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Counted from the moment the overlay closes. Default 30s. From the 3rd alert on, the overlay also shows an \"AI might be wrong — stop reminding\" button."
           }
         }
       }
     },
-    "从遮罩关闭瞬间起计算。默认 30s。第 3 次起遮罩多一个 \"AI 可能误判，本次不再提醒\" 按钮。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Counted from the moment the overlay closes. Default 30s. From the 3rd alert on, the overlay also shows an \"AI might be wrong — stop reminding\" button."
+    "休息一下": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take a break"
           }
         }
       }
     },
-    "休息一下" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Take a break"
+    "休息中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On break"
           }
         }
       }
     },
-    "休息中" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "On break"
+    "休息也是工作的一部分。要不要再坚持几分钟？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest is part of the work too — want to give it a few more minutes?"
           }
         }
       }
     },
-    "休息也是工作的一部分。要不要再坚持几分钟？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rest is part of the work too — want to give it a few more minutes?"
+    "休息结束": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Break over"
           }
         }
       }
     },
-    "休息结束" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Break over"
+    "似乎不在电脑前 · 回来一下？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looks like you're away · check back in?"
           }
         }
       }
     },
-    "似乎不在电脑前 · 回来一下？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Looks like you're away · check back in?"
+    "似乎偏离了承诺。回到正事？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looks like you drifted. Want to get back to it?"
           }
         }
       }
     },
-    "似乎偏离了承诺，看看回到正事？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Looks like you drifted — want to head back?"
+    "似乎偏离了承诺，看看回到正事？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looks like you drifted — want to head back?"
           }
         }
       }
     },
-    "似乎偏离了承诺。回到正事？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Looks like you drifted. Want to get back to it?"
+    "例：完成季度报告初稿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. Finish the first draft of the quarterly report"
           }
         }
       }
     },
-    "例：完成季度报告初稿" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "e.g. Finish the first draft of the quarterly report"
+    "停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
           }
         }
       }
     },
-    "停止" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop"
+    "全局快捷键": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global Shortcut"
           }
         }
       }
     },
-    "全局快捷键" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Global Shortcut"
+    "全部删除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All"
           }
         }
       }
     },
-    "全部删除" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete All"
-          }
-        }
-      }
-    },
-    "共 %@ 个文件 · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ files · %@ total"
+    "共 %@ 个文件 · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ files · %@ total"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "共 %1$@ 个文件 · %2$@"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "共 %1$@ 个文件 · %2$@"
           }
         }
       }
     },
-    "共 %@ 条" : {
-
-    },
-    "共 %lld 个文件 · %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld files · %@"
+    "共 %@ 条": {},
+    "共 %lld 个文件 · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld files · %@"
           }
         }
       }
     },
-    "共 %lld 条" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld total"
+    "共 %lld 条": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld total"
           }
         }
       }
     },
-    "关于 Vigil" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "About Vigil"
+    "关于 Vigil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Vigil"
           }
         }
       }
     },
-    "关闭" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close"
+    "关闭": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
           }
         }
       }
     },
-    "关闭主窗口（Cmd+W）→ 从 Dock 重新点击 Vigil 图标，引导会再次出现。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close the main window (Cmd+W), then click the Vigil icon in the Dock again — the onboarding will reappear."
+    "关闭主窗口（Cmd+W）→ 从 Dock 重新点击 Vigil 图标，引导会再次出现。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the main window (Cmd+W), then click the Vigil icon in the Dock again — the onboarding will reappear."
           }
         }
       }
     },
-    "再来一轮" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Another round"
+    "再来一轮": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another round"
           }
         }
       }
     },
-    "最长 %@ 天" : {
-
-    },
-    "最长 %lld 天" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Longest: %lld days"
+    "写入下载文件失败：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to save downloaded file: %@"
           }
         }
       }
     },
-    "写入下载文件失败：%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to save downloaded file: %@"
+    "准备中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing…"
           }
         }
       }
     },
-    "准备中…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preparing…"
+    "准备就绪": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All set"
           }
         }
       }
     },
-    "准备就绪" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All set"
+    "出错了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong"
           }
         }
       }
     },
-    "出错了" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Something went wrong"
+    "分心": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distracted"
           }
         }
       }
     },
-    "分心" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Distracted"
+    "分心持续提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeating distraction alert"
           }
         }
       }
     },
-    "分心持续提醒" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Repeating distraction alert"
+    "分心未回时每隔一段时间再弹一次": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-alert at intervals when you're still distracted"
           }
         }
       }
     },
-    "分心未回时每隔一段时间再弹一次" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-alert at intervals when you're still distracted"
+    "分钟": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "min"
           }
         }
       }
     },
-    "分钟" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "min"
+    "删除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
           }
         }
       }
     },
-    "删除" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete"
+    "刷新统计": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh stats"
           }
         }
       }
     },
-    "刷新统计" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Refresh stats"
+    "历史会话": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Past sessions"
           }
         }
       }
     },
-    "历史会话" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Past sessions"
+    "发布于 %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Released %@"
           }
         }
       }
     },
-    "发布于 %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Released %@"
+    "发现新版本 %@，将弹出更新窗口": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New version %@ found. The update window will appear."
           }
         }
       }
     },
-    "发现新版本 %@，将弹出更新窗口" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New version %@ found. The update window will appear."
+    "取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         }
       }
     },
-    "取消" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
+    "可以回到工作了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time to get back to it"
           }
         }
       }
     },
-    "可以回到工作了" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Time to get back to it"
+    "可在这里直接增 / 删 / 改 / 测试。视觉模型才能分析截图。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add, edit, delete, and test here. Only vision-capable models can analyze screenshots."
           }
         }
       }
     },
-    "可在这里直接增 / 删 / 改 / 测试。视觉模型才能分析截图。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add, edit, delete, and test here. Only vision-capable models can analyze screenshots."
+    "各 session 目录里：\n• diagnostic.jsonl — 每帧决策（dHash 距离、是否调 AI、level）\n• prompts.jsonl — 完整 prompt（仅 debug 开启）\n• *.jpg — 调 AI 时落盘的截图": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inside each session folder:\n• diagnostic.jsonl — per-frame decisions (dHash distance, AI called, level)\n• prompts.jsonl — full prompts (debug only)\n• *.jpg — screenshots sent to AI"
           }
         }
       }
     },
-    "各 session 目录里：\n• diagnostic.jsonl — 每帧决策（dHash 距离、是否调 AI、level）\n• prompts.jsonl — 完整 prompt（仅 debug 开启）\n• *.jpg — 调 AI 时落盘的截图" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inside each session folder:\n• diagnostic.jsonl — per-frame decisions (dHash distance, AI called, level)\n• prompts.jsonl — full prompts (debug only)\n• *.jpg — screenshots sent to AI"
+    "启用后，Vigil 在启动 5 秒后检查一次，并每 24 小时自动检查新版本。\n更新通过 GitHub Releases 推送，不会上传任何用户数据。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, Vigil checks 5 seconds after launch, then every 24 hours.\nUpdates are delivered via GitHub Releases. No user data is uploaded."
           }
         }
       }
     },
-    "启用后，Vigil 在启动 5 秒后检查一次，并每 24 小时自动检查新版本。\n更新通过 GitHub Releases 推送，不会上传任何用户数据。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When enabled, Vigil checks 5 seconds after launch, then every 24 hours.\nUpdates are delivered via GitHub Releases. No user data is uploaded."
+    "启用提示音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable sound"
           }
         }
       }
     },
-    "启用提示音" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable sound"
+    "响应解析失败：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Response parsing failed: %@"
           }
         }
       }
     },
-    "响应解析失败：%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Response parsing failed: %@"
+    "回来一下": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come back"
           }
         }
       }
     },
-    "回来一下" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Come back"
+    "国内访问 GitHub 经常卡顿。建议用浏览器直接下载——浏览器自带连接优化，成功率通常比 App 内下载高。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub downloads can be slow or fail from some regions. Opening in your browser usually works better — browsers come with built-in connection optimizations."
           }
         }
       }
     },
-    "国内访问 GitHub 经常卡顿。建议用浏览器直接下载——浏览器自带连接优化，成功率通常比 App 内下载高。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub downloads can be slow or fail from some regions. Opening in your browser usually works better — browsers come with built-in connection optimizations."
+    "在 Finder 打开": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reveal in Finder"
           }
         }
       }
     },
-    "在 Finder 打开" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reveal in Finder"
+    "声音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sound"
           }
         }
       }
     },
-    "声音" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sound"
+    "复用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reused"
           }
         }
       }
     },
-    "复用" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reused"
+    "好": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         }
       }
     },
-    "好" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OK"
+    "存储": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage"
           }
         }
       }
     },
-    "存储" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Storage"
+    "完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
           }
         }
       }
     },
-    "完成" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        }
-      }
-    },
-    "屏幕录制权限" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screen Recording"
-          }
-        }
-      }
-    },
-    "展开全部（还有 %@ 条）" : {
-
-    },
-    "展开全部（还有 %lld 条）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show all (%lld more)"
-          }
-        }
-      }
-    },
-    "已完成" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Completed"
-          }
-        }
-      }
-    },
-    "已授权" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Granted"
-          }
-        }
-      }
-    },
-    "已放弃" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abandoned"
-          }
-        }
-      }
-    },
-    "已是最新版本" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You're on the latest version"
-          }
-        }
-      }
-    },
-    "已重置引导" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Onboarding reset"
-          }
-        }
-      }
-    },
-    "开启后，每个 session 目录下会生成 prompts.jsonl，记录每次 AI 调用的 system / user prompt、是否带图、完整响应、耗时。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When enabled, each session folder gets a prompts.jsonl with the system + user prompt, whether an image was attached, the full response, and latency for every AI call."
-          }
-        }
-      }
-    },
-    "开始 %lld 分钟" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start (%lld min)"
-          }
-        }
-      }
-    },
-    "开始专注" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start Focus"
-          }
-        }
-      }
-    },
-    "开始专注…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start Focus…"
-          }
-        }
-      }
-    },
-    "开始使用" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get started"
-          }
-        }
-      }
-    },
-    "当前：%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current: %@"
-          }
-        }
-      }
-    },
-    "当前承诺：%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current promise: %@"
-          }
-        }
-      }
-    },
-    "当前版本" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current Version"
-          }
-        }
-      }
-    },
-    "当前版本 %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current version %@"
-          }
-        }
-      }
-    },
-    "当前版本 %@ → %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current %@ → %@"
+    "屏幕 %@/%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen %1$@/%2$@ · %3$@"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "当前版本 %1$@ → %2$@"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "屏幕 %1$@/%2$@ · %3$@"
           }
         }
       }
     },
-    "当前路径" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current path"
+    "屏幕 %lld/%lld · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen %lld/%lld · %@"
           }
         }
       }
     },
-    "快捷键" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shortcuts"
+    "屏幕录制权限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Recording"
           }
         }
       }
     },
-    "我回来了" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I'm back"
+    "展开全部（还有 %@ 条）": {},
+    "展开全部（还有 %lld 条）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all (%lld more)"
           }
         }
       }
     },
-    "我这次要专注于…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What I'll focus on…"
+    "已完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed"
           }
         }
       }
     },
-    "截图与诊断日志" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screenshots & diagnostic logs"
+    "已授权": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Granted"
           }
         }
       }
     },
-    "截屏" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture"
+    "已放弃": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandoned"
           }
         }
       }
     },
-    "截当前屏 + 让模型描述，验证模型是否真有视觉能力" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture the current screen and ask the model to describe it, verifying real vision capability."
+    "已是最新版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're on the latest version"
           }
         }
       }
     },
-    "手动结束" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Manually stopped"
+    "已重置引导": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onboarding reset"
           }
         }
       }
     },
-    "打开 GitHub 仓库" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open GitHub Repo"
+    "开启后，每个 session 目录下会生成 prompts.jsonl，记录每次 AI 调用的 system / user prompt、是否带图、完整响应、耗时。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, each session folder gets a prompts.jsonl with the system + user prompt, whether an image was attached, the full response, and latency for every AI call."
           }
         }
       }
     },
-    "打开 Release 页" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Release Page"
+    "开始 %lld 分钟": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start (%lld min)"
           }
         }
       }
     },
-    "打开 sessions 目录" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open sessions folder"
+    "开始专注": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Focus"
           }
         }
       }
     },
-    "打开专注面板" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open promise panel"
+    "开始专注…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Focus…"
           }
         }
       }
     },
-    "打开承诺面板" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Promise Panel"
+    "开始使用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get started"
           }
         }
       }
     },
-    "打开系统设置" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open System Settings"
+    "当前承诺：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current promise: %@"
           }
         }
       }
     },
-    "持续提醒已 3 次。可点上方按钮静默直到状态恢复 · 30 秒后自动消失" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reminded 3 times. Tap the button above to silence until you re-focus · auto-dismisses in 30s"
+    "当前版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current Version"
           }
         }
       }
     },
-    "持续走神（wandering）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Persistent wandering"
+    "当前版本 %@": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current version %@"
           }
         }
       }
     },
-    "按 ⇧⌘⌥Space 或点主窗口大按钮起一次 Promise。\n可以从一个简单的承诺开始，比如『写一份周报』。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Press ⇧⌘⌥Space or click the big button in the main window to start a promise.\nKeep it simple at first, e.g. \"Write a weekly report\"."
+    "当前版本 %@ → %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current %@ → %@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "new",
+            "value": "当前版本 %1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "当前路径": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current path"
+          }
+        }
+      }
+    },
+    "当前：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current: %@"
+          }
+        }
+      }
+    },
+    "快捷键": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcuts"
+          }
+        }
+      }
+    },
+    "我回来了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm back"
+          }
+        }
+      }
+    },
+    "我这次要专注于…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What I'll focus on…"
+          }
+        }
+      }
+    },
+    "截图与诊断日志": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screenshots & diagnostic logs"
+          }
+        }
+      }
+    },
+    "截屏": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture"
+          }
+        }
+      }
+    },
+    "截当前屏 + 让模型描述，验证模型是否真有视觉能力": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture the current screen and ask the model to describe it, verifying real vision capability."
+          }
+        }
+      }
+    },
+    "手动结束": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manually stopped"
+          }
+        }
+      }
+    },
+    "打开 GitHub 仓库": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open GitHub Repo"
+          }
+        }
+      }
+    },
+    "打开 Release 页": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Release Page"
+          }
+        }
+      }
+    },
+    "打开 sessions 目录": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open sessions folder"
+          }
+        }
+      }
+    },
+    "打开专注面板": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open promise panel"
+          }
+        }
+      }
+    },
+    "打开承诺面板": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Promise Panel"
+          }
+        }
+      }
+    },
+    "打开系统设置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "持续提醒已 3 次。可点上方按钮静默直到状态恢复 · 30 秒后自动消失": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminded 3 times. Tap the button above to silence until you re-focus · auto-dismisses in 30s"
+          }
+        }
+      }
+    },
+    "持续走神（wandering）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Persistent wandering"
+          }
+        }
+      }
+    },
+    "按 ⇧⌘⌥Space 或点主窗口大按钮起一次 Promise。\n可以从一个简单的承诺开始，比如『写一份周报』。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press ⇧⌘⌥Space or click the big button in the main window to start a promise.\nKeep it simple at first, e.g. \"Write a weekly report\"."
+          }
+        }
+      }
+    },
+    "接下来": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up next"
+          }
+        }
+      }
+    },
+    "提前结束休息": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End break early"
+          }
         }
       }
     },
-    "接下来" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Up next"
+    "提前结束休息？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End the break early?"
           }
         }
       }
     },
-    "提前结束休息" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End break early"
+    "提醒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerts"
           }
         }
       }
     },
-    "提前结束休息？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End the break early?"
+    "收起": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse"
           }
         }
       }
     },
-    "提醒" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alerts"
+    "新增": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
           }
         }
       }
     },
-    "收起" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collapse"
+    "新建服务": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New service"
           }
         }
       }
     },
-    "新增" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add"
+    "无数据": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No data"
           }
         }
       }
     },
-    "新建服务" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New service"
+    "无法自动挂载 dmg，请从 %@ 手动打开": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not auto-mount dmg. Please open it manually from %@"
           }
         }
       }
     },
-    "无数据" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No data"
+    "无法连接 AI 服务": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't reach the AI service"
           }
         }
       }
     },
-    "无法自动挂载 dmg，请从 %@ 手动打开" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not auto-mount dmg. Please open it manually from %@"
+    "时长": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duration"
           }
         }
       }
     },
-    "无法连接 AI 服务" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Can't reach the AI service"
+    "时间兜底（即使画面没变也至少 X 秒调一次 AI）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time fallback (call AI at least once every X seconds, even if the screen hasn't changed)"
           }
         }
       }
     },
-    "时长" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Duration"
+    "时间轴": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline"
           }
         }
       }
     },
-    "时间兜底（即使画面没变也至少 X 秒调一次 AI）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Time fallback (call AI at least once every X seconds, even if the screen hasn't changed)"
+    "昵称": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname"
           }
         }
       }
     },
-    "时间轴" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timeline"
+    "显示主窗口": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Main Window"
           }
         }
       }
     },
-    "昵称" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nickname"
+    "最长 %@ 天": {},
+    "最长 %lld 天": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Longest: %lld days"
           }
         }
       }
     },
-    "显示主窗口" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Main Window"
+    "期间不会监督屏幕。到时通知你并弹出下一轮承诺面板。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No screen monitoring while you rest. You'll get a notification and the next promise panel when time's up."
           }
         }
       }
     },
-    "期间不会监督屏幕。到时通知你并弹出下一轮承诺面板。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No screen monitoring while you rest. You'll get a notification and the next promise panel when time's up."
+    "未授权": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not granted"
           }
         }
       }
     },
-    "未授权" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not granted"
+    "本地 / 局域网服务，不出公网": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local / LAN service — stays off the public internet"
           }
         }
       }
     },
-    "本地 / 局域网服务，不出公网" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local / LAN service — stays off the public internet"
+    "本地 LM Studio": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local LM Studio"
           }
         }
       }
     },
-    "本地 LM Studio" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local LM Studio"
+    "本帧已把截图发给 AI；要看模型实际收到的 prompt，开启 Settings → Debug": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screenshot was sent to the AI for this frame; enable Settings → Debug to inspect the exact prompt."
           }
         }
       }
     },
-    "本帧已把截图发给 AI；要看模型实际收到的 prompt，开启 Settings → Debug" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screenshot was sent to the AI for this frame; enable Settings → Debug to inspect the exact prompt."
+    "查看日志": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View logs"
           }
         }
       }
     },
-    "查看日志" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View logs"
+    "校验中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
           }
         }
       }
     },
-    "校验中…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Checking…"
+    "根对象不是 JSON 字典": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Root object is not a JSON dictionary"
           }
         }
       }
     },
-    "根对象不是 JSON 字典" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Root object is not a JSON dictionary"
+    "检查失败：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check failed: %@"
           }
         }
       }
     },
-    "检查失败：%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check failed: %@"
+    "检测到分心": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distraction detected"
           }
         }
       }
     },
-    "检测到分心" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Distraction detected"
+    "欢迎使用 Vigil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Vigil"
           }
         }
       }
     },
-    "欢迎使用 Vigil" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Welcome to Vigil"
+    "正在下载新版本…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading new version…"
           }
         }
       }
     },
-    "正在下载新版本…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloading new version…"
+    "正在准备安装…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing to install…"
           }
         }
       }
     },
-    "正在准备安装…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preparing to install…"
+    "正在检查…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
           }
         }
       }
     },
-    "正在检查…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Checking…"
+    "正在生成复盘…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generating recap…"
           }
         }
       }
     },
-    "正在生成复盘…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Generating recap…"
+    "此操作不可撤销。历史 session 的截图与 diagnostic.jsonl 都会被删除。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This cannot be undone. Screenshots and diagnostic.jsonl from past sessions will be deleted."
           }
         }
       }
     },
-    "此操作不可撤销。历史 session 的截图与 diagnostic.jsonl 都会被删除。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This cannot be undone. Screenshots and diagnostic.jsonl from past sessions will be deleted."
+    "每个 session 的 diagnostic.jsonl 写在该 session 的子目录里：": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each session's diagnostic.jsonl lives in its own subfolder:"
           }
         }
       }
     },
-    "每个 session 的 diagnostic.jsonl 写在该 session 的子目录里：" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Each session's diagnostic.jsonl lives in its own subfolder:"
+    "比 distract 弱：黄色描边 + 12s 自动收回，不发声、不弹遮罩。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter than the distraction alert: yellow outline + 12s auto-hide, no sound or full-screen overlay."
           }
         }
       }
     },
-    "比 distract 弱：黄色描边 + 12s 自动收回，不发声、不弹遮罩。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lighter than the distraction alert: yellow outline + 12s auto-hide, no sound or full-screen overlay."
+    "沙盒 App 的截图只能保存在 Container 内部目录；自定义路径需要 Security-Scoped Bookmark（v0.2 计划）。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sandboxed apps may only store screenshots inside their container directory. Custom paths require Security-Scoped Bookmarks (planned for v0.2)."
           }
         }
       }
     },
-    "沙盒 App 的截图只能保存在 Container 内部目录；自定义路径需要 Security-Scoped Bookmark（v0.2 计划）。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sandboxed apps may only store screenshots inside their container directory. Custom paths require Security-Scoped Bookmarks (planned for v0.2)."
+    "沙盒 App 的截图必须保存在 Container 内部目录；自定义路径需要 v0.2 用 Security-Scoped Bookmarks 处理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A sandboxed app must store screenshots inside its container; custom paths will need Security-Scoped Bookmarks in v0.2."
           }
         }
       }
     },
-    "沙盒 App 的截图必须保存在 Container 内部目录；自定义路径需要 v0.2 用 Security-Scoped Bookmarks 处理。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A sandboxed app must store screenshots inside its container; custom paths will need Security-Scoped Bookmarks in v0.2."
+    "测试视觉": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test vision"
           }
         }
       }
     },
-    "测试视觉" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Test vision"
+    "测试连通性": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test connection"
           }
         }
       }
     },
-    "测试连通性" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Test connection"
+    "清空所有截图": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear all screenshots"
           }
         }
       }
     },
-    "清空所有截图" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear all screenshots"
+    "点「开始专注」弹出输入框（可在设置里绑快捷键）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click \"Start Focus\" to open the prompt (bind a shortcut in Settings)"
           }
         }
       }
     },
-    "点「开始专注」弹出输入框（可在设置里绑快捷键）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click \"Start Focus\" to open the prompt (bind a shortcut in Settings)"
+    "点「开始专注」或按 %@ 弹出输入框": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click \"Start Focus\" or press %@ to open the prompt"
           }
         }
       }
     },
-    "点「开始专注」或按 %@ 弹出输入框" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click \"Start Focus\" or press %@ to open the prompt"
+    "点击「我回来了」返回 · 30 秒后自动消失": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click \"I'm back\" to dismiss · auto-dismisses in 30s"
           }
         }
       }
     },
-    "点击「我回来了」返回 · 30 秒后自动消失" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Click \"I'm back\" to dismiss · auto-dismisses in 30s"
+    "点击后关闭 Vigil 主窗口再重新打开（Cmd+W → Dock 点击图标），引导流程会再次出现。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After clicking, close the main window with Cmd+W and reopen it from the Dock — the onboarding will appear again."
           }
         }
       }
     },
-    "点击后关闭 Vigil 主窗口再重新打开（Cmd+W → Dock 点击图标），引导流程会再次出现。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After clicking, close the main window with Cmd+W and reopen it from the Dock — the onboarding will appear again."
+    "用一句承诺约束自己，AI 看屏判断你是否真在做。\n本地 / 任意 OpenAI 兼容 AI 都能接入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold yourself to one promise. AI watches your screen to judge whether you're really doing it.\nWorks with any local or OpenAI-compatible model."
           }
         }
       }
     },
-    "用一句承诺约束自己，AI 看屏判断你是否真在做。\n本地 / 任意 OpenAI 兼容 AI 都能接入。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hold yourself to one promise. AI watches your screen to judge whether you're really doing it.\nWorks with any local or OpenAI-compatible model."
+    "用户长时间无键鼠输入 = 可能离开电脑去玩手机。靠声音提醒（不看屏幕）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No keyboard or mouse input for a while usually means you've stepped away. The sound reminder works without needing to look at the screen."
           }
         }
       }
     },
-    "用户长时间无键鼠输入 = 可能离开电脑去玩手机。靠声音提醒（不看屏幕）。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No keyboard or mouse input for a while usually means you've stepped away. The sound reminder works without needing to look at the screen."
+    "用浏览器下载": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download in Browser"
           }
         }
       }
     },
-    "用浏览器下载" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Download in Browser"
+    "画面变化阈值（dHash 汉明距离）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen-change threshold (dHash Hamming distance)"
           }
         }
       }
     },
-    "画面变化阈值（dHash 汉明距离）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screen-change threshold (dHash Hamming distance)"
+    "界面文案与 AI 反馈都会跟随这个语言。默认跟随系统设置。\n切换后菜单栏与通知会在下次构造时刷新；主界面立即生效。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both the UI and AI responses follow this setting. Defaults to system language.\nMenu bar items and notifications refresh on their next render; the main UI updates immediately."
           }
         }
       }
     },
-    "界面文案与 AI 反馈都会跟随这个语言。默认跟随系统设置。\n切换后菜单栏与通知会在下次构造时刷新；主界面立即生效。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Both the UI and AI responses follow this setting. Defaults to system language.\nMenu bar items and notifications refresh on their next render; the main UI updates immediately."
+    "界面语言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display language"
           }
         }
       }
     },
-    "界面语言" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Display language"
+    "确认清空所有截图与诊断日志？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear all screenshots and diagnostic logs?"
           }
         }
       }
     },
-    "确认清空所有截图与诊断日志？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear all screenshots and diagnostic logs?"
+    "稍后再说": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
           }
         }
       }
     },
-    "视觉测试中（约 5-15s）…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Testing vision (~5-15s)…"
+    "空闲": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idle"
           }
         }
       }
     },
-    "稍后再说" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Later"
+    "空闲判定（用户无输入多久算 idle）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idle detection (how long without input counts as idle)"
           }
         }
       }
     },
-    "空闲" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Idle"
+    "立即更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Now"
           }
         }
       }
     },
-    "空闲判定（用户无输入多久算 idle）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Idle detection (how long without input counts as idle)"
+    "立即检查更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates"
           }
         }
       }
     },
-    "立即更新" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update Now"
+    "等待": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting"
           }
         }
       }
     },
-    "立即检查更新" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check for Updates"
+    "结束休息": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End break"
           }
         }
       }
     },
-    "等待" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waiting"
+    "继续休息": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep resting"
           }
         }
       }
     },
-    "结束休息" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End break"
+    "编辑": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
           }
         }
       }
     },
-    "继续休息" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep resting"
+    "编辑服务": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Service"
           }
         }
       }
     },
-    "编辑" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit"
+    "缺失 tag_name 或解析失败": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing or unparseable tag_name"
           }
         }
       }
     },
-    "编辑服务" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit Service"
+    "自动更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic Updates"
           }
         }
       }
     },
-    "缺失 tag_name 或解析失败" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Missing or unparseable tag_name"
+    "自动检查更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-check for Updates"
           }
         }
       }
     },
-    "自动更新" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatic Updates"
+    "自定义": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom"
           }
         }
       }
     },
-    "自动检查更新" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auto-check for Updates"
+    "视觉测试中（约 5-15s）…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testing vision (~5-15s)…"
           }
         }
       }
     },
-    "自定义" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom"
+    "记录完整 prompt 进出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log full prompt input/output"
           }
         }
       }
     },
-    "记录完整 prompt 进出" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log full prompt input/output"
+    "诊断日志（每帧决策）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic log (per-frame decisions)"
           }
         }
       }
     },
-    "诊断日志（每帧决策）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diagnostic log (per-frame decisions)"
+    "该版本未上传 dmg 资源，请前往 Release 页手动下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No dmg asset for this release. Please download manually from the Release page."
           }
         }
       }
     },
-    "该版本未上传 dmg 资源，请前往 Release 页手动下载" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No dmg asset for this release. Please download manually from the Release page."
+    "语言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
           }
         }
       }
     },
-    "语言" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Language"
+    "请先到设置中配置 AI 服务": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please configure an AI service in Settings"
           }
         }
       }
     },
-    "请先到设置中配置 AI 服务" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please configure an AI service in Settings"
+    "请求授权": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Request permission"
           }
         }
       }
     },
-    "请求授权" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Request permission"
+    "调试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debug"
           }
         }
       }
     },
-    "调试" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Debug"
+    "走神": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wandering"
           }
         }
       }
     },
-    "走神" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wandering"
+    "走神时 Vigil 会用通知 + 提示音把你拉回。首次会弹原生授权框。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you drift, Vigil uses a notification + sound to pull you back. The first time, macOS will ask for permission."
           }
         }
       }
     },
-    "走神时 Vigil 会用通知 + 提示音把你拉回。首次会弹原生授权框。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When you drift, Vigil uses a notification + sound to pull you back. The first time, macOS will ask for permission."
+    "走神时间有点长 · 回到正事吗？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wandering for a while · back to it?"
           }
         }
       }
     },
-    "走神时间有点长 · 回到正事吗？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wandering for a while · back to it?"
+    "返回首页": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to home"
           }
         }
       }
     },
-    "返回首页" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back to home"
+    "还没有会话": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sessions yet"
           }
         }
       }
     },
-    "还没有会话" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No sessions yet"
+    "这次专注做什么？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's this session for?"
           }
         }
       }
     },
-    "这次专注做什么？" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What's this session for?"
+    "进行中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In progress"
           }
         }
       }
     },
-    "进行中" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In progress"
+    "连续 wandering 多久后触发首次提醒。默认 120s。回到 fully 后计时重置。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How long continuous wandering triggers the first alert. Default 120s. The timer resets once you're focused again."
           }
         }
       }
     },
-    "连续 wandering 多久后触发首次提醒。默认 120s。回到 fully 后计时重置。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How long continuous wandering triggers the first alert. Default 120s. The timer resets once you're focused again."
+    "连续打卡天数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streak"
           }
         }
       }
     },
-    "连续打卡天数" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Streak"
+    "连通测试中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testing connection…"
           }
         }
       }
     },
-    "连通测试中…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Testing connection…"
+    "退出 Vigil": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit Vigil"
           }
         }
       }
     },
-    "退出 Vigil" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quit Vigil"
+    "通用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
           }
         }
       }
     },
-    "通用" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "General"
+    "通知权限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
           }
         }
       }
     },
-    "通知权限" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifications"
+    "配置 AI 服务": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure AI service"
           }
         }
       }
     },
-    "配置 AI 服务" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configure AI service"
+    "重弹": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-alert"
           }
         }
       }
     },
-    "重弹" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-alert"
+    "重新查看引导流程": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replay onboarding"
           }
         }
       }
     },
-    "重新查看引导流程" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Replay onboarding"
+    "重新检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-check"
           }
         }
       }
     },
-    "重新检查" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Re-check"
+    "重置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
           }
         }
       }
     },
-    "重置" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset"
+    "重试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry"
           }
         }
       }
     },
-    "重试" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry"
+    "重试下载": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry Download"
           }
         }
       }
     },
-    "重试下载" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry Download"
+    "长时间不在电脑前（idle）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Long time away from the computer (idle)"
           }
         }
       }
     },
-    "长时间不在电脑前（idle）" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Long time away from the computer (idle)"
+    "间隔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interval"
           }
         }
       }
     },
-    "间隔" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Interval"
+    "阈值": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Threshold"
           }
         }
       }
     },
-    "阈值" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Threshold"
+    "音量": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volume"
           }
         }
       }
     },
-    "音量" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volume"
+    "首次提醒后，wandering 仍持续时每隔多少秒重弹一次。默认 60s。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you're still wandering after the first alert, how often to re-alert. Default 60s."
           }
         }
       }
     },
-    "首次提醒后，wandering 仍持续时每隔多少秒重弹一次。默认 60s。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you're still wandering after the first alert, how often to re-alert. Default 60s."
+    "首次跳变到分心一定会弹遮罩；关掉此项后，持续分心不再额外提醒，直到状态切换。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The overlay always shows the first time you become distracted; with this off, you won't be alerted again until you switch state."
           }
         }
       }
     },
-    "首次跳变到分心一定会弹遮罩；关掉此项后，持续分心不再额外提醒，直到状态切换。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The overlay always shows the first time you become distracted; with this off, you won't be alerted again until you switch state."
+    "默认 30s。设小耗 token 多但更敏感；设大省 token。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default 30s. Lower values are more sensitive but cost more tokens; higher values save tokens."
           }
         }
       }
     },
-    "默认 ⇧⌘⌥Space。⌘⌥Space 默认被 Spotlight 占用。点击右侧按钮可重新录制。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default ⇧⌘⌥Space. ⌘⌥Space is reserved by Spotlight. Click the recorder on the right to rebind."
+    "默认 30s。超过此时长强制取消，复用上次 level 入库。设短=容错激进、占用低；设长=容忍网络波动 / 大模型慢。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default 30s. The call is cancelled past this threshold and the previous level is reused. Shorter = aggressive fail-fast, lower latency tail; longer = tolerant of slow networks or large models."
           }
         }
       }
     },
-    "默认 30s。设小耗 token 多但更敏感；设大省 token。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default 30s. Lower values are more sensitive but cost more tokens; higher values save tokens."
+    "默认 60s。空闲时段标 idle 且不调 AI。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default 60s. Idle periods are tagged as such and the AI isn't called."
           }
         }
       }
     },
-    "默认 30s。超过此时长强制取消，复用上次 level 入库。设短=容错激进、占用低；设长=容忍网络波动 / 大模型慢。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default 30s. The call is cancelled past this threshold and the previous level is reused. Shorter = aggressive fail-fast, lower latency tail; longer = tolerant of slow networks or large models."
+    "默认 ⇧⌘⌥Space。⌘⌥Space 默认被 Spotlight 占用。点击右侧按钮可重新录制。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default ⇧⌘⌥Space. ⌘⌥Space is reserved by Spotlight. Click the recorder on the right to rebind."
           }
         }
       }
     },
-    "默认 60s。空闲时段标 idle 且不调 AI。" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default 60s. Idle periods are tagged as such and the AI isn't called."
+    "鼠标悬停某个音名即可试听，点击选中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover over a sound to preview it; click to select."
           }
         }
       }
     },
-    "鼠标悬停某个音名即可试听，点击选中" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hover over a sound to preview it; click to select."
+    "（这一版本暂无更新说明）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(No release notes for this version)"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

@@ -6,9 +6,9 @@ import OSLog
 ///
 /// 1. idle（用户长时间无输入）→ 标 idle，不调 AI
 /// 2. 截屏失败 / 桌面 only / 无窗口 → skip
-/// 3. AI 仍在跑 → skip 这一帧
-/// 4. dHash 距离 < 阈值 且 距上次 AI 不到 maxAIInterval → skip
-/// 5. 否则调 AI 分析这一帧
+/// 3. AI 仍在跑 → skip 这一帧；否则截全部显示器（minX 升序）
+/// 4. dHash 多屏求值：每屏各算 hash，max 距离 < 阈值 且 距上次 AI 不到 maxAIInterval → skip
+/// 5. 否则调 AI 分析这一帧（多图消息：每屏一张图，minX 序；落库 dhashHex/dhashDistance 记 max 屏的值）
 ///
 /// 同时把每一帧的诊断（含 dHash / 距离 / 决策原因）写到本地 jsonl，用于日后调参。
 actor FrameAnalyzer {
@@ -19,7 +19,7 @@ actor FrameAnalyzer {
     private let sessionID: UUID
     private let diagnosticLogURL: URL
 
-    private var lastAnalyzedHash: Data?
+    private var lastAnalyzedHashes: [CGDirectDisplayID: Data] = [:]
     private var lastAnalyzedAt: Date?
     private var lastLevel: FocusLevel?
     private var isAIBusy = false
@@ -56,10 +56,10 @@ actor FrameAnalyzer {
     // MARK: - 主入口：一帧
 
     /// 调用一次决策流，返回这帧的决策与可能的 AnalysisRecord 字段。
-    /// `now` 注入便于测试。`captureOverride` 让测试可以不依赖真截屏。
+    /// `now` 注入便于测试。`captureOverride` 让测试可以不依赖真截屏（返回各屏帧，minX 升序）。
     func tick(
         now: Date = .now,
-        captureOverride: ((@Sendable () async throws -> CGImage)?) = nil
+        captureOverride: ((@Sendable () async throws -> [DisplayFrame])?) = nil
     ) async -> FrameTickResult {
         // Gate 1: idle
         let idleSec = MainActorBridge.runSync { IdleDetector.secondsSinceLastInput() }
@@ -75,13 +75,13 @@ actor FrameAnalyzer {
             return await record(.skippedAIBusy, at: now)
         }
 
-        // Gate 3: 截屏（含 desktop-only / no-windows 判定）
-        let image: CGImage
+        // Gate 3: 截屏（全显示器，minX 升序；含 desktop-only / no-windows 判定）
+        let frames: [DisplayFrame]
         do {
             if let override = captureOverride {
-                image = try await override()
+                frames = try await override()
             } else {
-                image = try await capture.captureMainDisplay()
+                frames = try await capture.captureAllDisplays()
             }
         } catch ScreenCaptureManager.CaptureError.desktopOnly,
                 ScreenCaptureManager.CaptureError.noDisplay {
@@ -90,17 +90,34 @@ actor FrameAnalyzer {
             logger.error("截屏失败：\(error.localizedDescription)")
             return await record(.skippedNoWindows, at: now)
         }
+        // 空数组保护（captureOverride 理论上可返回空；captureAllDisplays 空时自己抛错）
+        guard !frames.isEmpty else {
+            return await record(.skippedNoWindows, at: now)
+        }
 
-        // Gate 4: dHash 变化检测 + 时间兜底
-        let hash = DHashComputer.hash(image)
+        // Gate 4: dHash 变化检测（多屏：每屏各算 hash，max 距离与阈值比较）+ 时间兜底
+        var newHashes: [CGDirectDisplayID: Data] = [:]
+        for frame in frames {
+            newHashes[frame.displayID] = DHashComputer.hash(frame.image)
+        }
+        // 空字典必须等价旧版 nil（firstFrame 语义）——否则"空 old"会算出 distance=0 误跳首帧
+        let isFirstFrame = lastAnalyzedHashes.isEmpty
+        let hashEval = MultiDisplayDHash.distances(
+            old: isFirstFrame ? nil : lastAnalyzedHashes,
+            new: newHashes
+        )
+        // 落库 / 诊断日志统一记 max 屏的哈希（maxDisplayID 必为 new 的 key，frames 非空时必有值）
+        let maxHash = hashEval.maxDisplayID.flatMap { newHashes[$0] }
+
         var distance: Int? = nil
         var reason: FrameDecision.AnalysisReason
-        if let prev = lastAnalyzedHash {
-            let d = DHashComputer.distance(prev, hash)
+        if !isFirstFrame {
+            let d = hashEval.max
             distance = d
             let timedOut = lastAnalyzedAt.map { now.timeIntervalSince($0) >= config.maxAIInterval } ?? true
             if d < config.dhashThreshold && !timedOut {
-                return await record(.skippedDhashStable(distance: d), at: now, image: image, hash: hash)
+                // dHash skip 不更新 hash 字典（现状语义保留）
+                return await record(.skippedDhashStable(distance: d), at: now, images: frames, hash: maxHash)
             }
             reason = timedOut ? .timeFallback : .dhashChanged
         } else {
@@ -113,27 +130,33 @@ actor FrameAnalyzer {
         defer { isAIBusy = false }
 
         let start = Date()
-        let jpeg: Data
-        do {
-            jpeg = try await encodeJPEG(image)
-        } catch {
-            logger.error("JPEG 编码失败：\(error.localizedDescription)")
+        // 逐屏编码 JPEG（各自 try? 容错，单屏失败只少一张图，不影响其余屏）；
+        // 全部失败才走"编码失败回落 lastLevel"分支（不更新 hash，下帧重试编码）
+        var jpegs: [Data] = []
+        jpegs.reserveCapacity(frames.count)
+        for frame in frames {
+            if let data = try? ScreenCaptureManager.jpegData(frame.image) {
+                jpegs.append(data)
+            }
+        }
+        guard !jpegs.isEmpty else {
+            logger.error("JPEG 编码失败：全部 \(frames.count) 块显示器均编码失败")
             return await record(
                 .analyzed(reason: reason, distance: distance, level: lastLevel ?? .wandering, fromAI: false),
-                at: now, image: image, hash: hash
+                at: now, images: frames, hash: maxHash
             )
         }
         do {
             // 任务级硬超时（取自 config，可在 Settings 调）。
             let hardTimeout = config.aiHardTimeout
             let result = try await withThrowingTaskGroup(of: FrameAnalysis.self) { group in
-                group.addTask { [service, currentPromise, front, jpeg, responseLanguage] in
+                group.addTask { [service, currentPromise, front, jpegs, responseLanguage] in
                     try await service.analyzeFrame(
                         FrameAnalysisInput(
                             promise: currentPromise,
                             appName: front.appName,
                             windowTitles: front.windowTitles,
-                            screenshotJPEG: jpeg,
+                            screenshotJPEGs: jpegs,
                             responseLanguage: responseLanguage
                         )
                     )
@@ -158,12 +181,12 @@ actor FrameAnalyzer {
                 // 首帧：非 fully 算"跳变进入非专注状态"
                 hasChanged = result.level != .fully
             }
-            lastAnalyzedHash = hash
+            lastAnalyzedHashes = newHashes  // 整字典替换：已拔除的屏自动剪枝
             lastAnalyzedAt = now
             lastLevel = result.level
             return await record(
                 .analyzed(reason: reason, distance: distance, level: result.level, fromAI: true),
-                at: now, image: image, hash: hash,
+                at: now, images: frames, hash: maxHash,
                 front: front, ai: result, latencyMs: latency, hasChanged: hasChanged,
                 diagnosticDistance: distance
             )
@@ -171,11 +194,11 @@ actor FrameAnalyzer {
             logger.error("AI 分析失败：\(error.localizedDescription)")
             // AI 失败：复用上次 level（如果有），fromAI=false
             let level = lastLevel ?? .wandering
-            lastAnalyzedHash = hash
+            lastAnalyzedHashes = newHashes
             lastAnalyzedAt = now
             return await record(
                 .analyzed(reason: reason, distance: distance, level: level, fromAI: false),
-                at: now, image: image, hash: hash, front: front, diagnosticDistance: distance
+                at: now, images: frames, hash: maxHash, front: front, diagnosticDistance: distance
             )
         }
     }
@@ -185,15 +208,15 @@ actor FrameAnalyzer {
     private func record(
         _ decision: FrameDecision,
         at now: Date,
-        image: CGImage? = nil,
+        images: [DisplayFrame] = [],
         hash: Data? = nil,
         front: FrontAppDetector.Result? = nil,
         ai: FrameAnalysis? = nil,
         latencyMs: Int = 0,
         hasChanged: Bool = false,
         // F7 修复：由 tick() 将已算好的 distance 传入，record() 不再重算。
-        // 重算的问题：tick() 在调 record() 前已执行 lastAnalyzedHash = hash，
-        // 导致 distance(lastAnalyzedHash, hash) = distance(hash, hash) = 0，恒为 0。
+        // 重算的问题：tick() 在调 record() 前已执行 lastAnalyzedHashes = newHashes，
+        // 导致 distance(lastHash, newHash) = distance(hash, hash) = 0，恒为 0。
         // skippedIdle / skippedNoWindows / skippedAIBusy 等跳过路径传 nil，日志字段为 null。
         diagnosticDistance: Int? = nil
     ) async -> FrameTickResult {
@@ -216,7 +239,7 @@ actor FrameAnalyzer {
 
         return FrameTickResult(
             decision: decision,
-            image: image,
+            images: images,
             hash: hash,
             front: front,
             ai: ai,
@@ -252,24 +275,14 @@ actor FrameAnalyzer {
             return "analyzed_\(r.rawValue)_\(fromAI ? "ai" : "fallback")"
         }
     }
-
-    private func encodeJPEG(_ image: CGImage) async throws -> Data {
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString + ".jpg")
-        try await MainActorBridge.runAsync {
-            try ScreenCaptureManager().encodeAndWrite(image, to: tempURL)
-        }
-        let data = try Data(contentsOf: tempURL)
-        try? FileManager.default.removeItem(at: tempURL)
-        return data
-    }
 }
 
 /// 单次 tick 的返回，上层把它转成 AnalysisRecord 落库。
 struct FrameTickResult: Sendable {
     let decision: FrameDecision
-    /// CGImage 不是 Sendable，但 actor 内部已转 jpeg；这里只在测试时观察用，生产中标 nil
-    let image: CGImage?
+    /// 本帧各屏截图（minX 升序）。skippedIdle / skippedNoWindows / skippedAIBusy 等决策为空数组。
+    /// CGImage 在 actor 内部已转 jpeg；这里供 persistTick 逐屏落盘与测试观察。
+    let images: [DisplayFrame]
     let hash: Data?
     let front: FrontAppDetector.Result?
     let ai: FrameAnalysis?

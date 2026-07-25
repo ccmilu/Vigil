@@ -10,7 +10,7 @@ final class FrameAnalyzerTests: XCTestCase {
         let analyzer = makeAnalyzer(service: mock)
 
         // 第一帧 → analyzed (firstFrame)
-        let r1 = await analyzer.tick(captureOverride: { img })
+        let r1 = await analyzer.tick(captureOverride: { single(img) })
         if case .analyzed(let reason, let dist, let level, let fromAI) = r1.decision {
             XCTAssertEqual(reason, .firstFrame)
             XCTAssertNil(dist)
@@ -21,7 +21,7 @@ final class FrameAnalyzerTests: XCTestCase {
         }
 
         // 第二帧（同图）→ skippedDhashStable
-        let r2 = await analyzer.tick(captureOverride: { img })
+        let r2 = await analyzer.tick(captureOverride: { single(img) })
         if case .skippedDhashStable(let dist) = r2.decision {
             XCTAssertLessThan(dist, 30)
         } else {
@@ -35,8 +35,8 @@ final class FrameAnalyzerTests: XCTestCase {
         let mock = MockAIService(level: .distracted)
         let analyzer = makeAnalyzer(service: mock)
 
-        _ = await analyzer.tick(captureOverride: { a })
-        let r = await analyzer.tick(captureOverride: { b })
+        _ = await analyzer.tick(captureOverride: { single(a) })
+        let r = await analyzer.tick(captureOverride: { single(b) })
         if case .analyzed(let reason, let dist, let level, _) = r.decision {
             XCTAssertEqual(reason, .dhashChanged)
             XCTAssertGreaterThanOrEqual(dist ?? 0, 30)
@@ -52,12 +52,12 @@ final class FrameAnalyzerTests: XCTestCase {
         let analyzer = makeAnalyzer(service: mock)
 
         // 先成功一次建立 lastLevel
-        _ = await analyzer.tick(captureOverride: { img })
+        _ = await analyzer.tick(captureOverride: { single(img) })
 
         // 切到失败模式，喂个不同图
         await mock.setShouldFail(true)
         let b = DHashComputerTests.gradientImage(width: 200, height: 100, reversed: true)
-        let r = await analyzer.tick(captureOverride: { b })
+        let r = await analyzer.tick(captureOverride: { single(b) })
         if case .analyzed(_, _, let level, let fromAI) = r.decision {
             XCTAssertEqual(level, .fully, "AI 失败应回落到 lastLevel")
             XCTAssertFalse(fromAI, "fromAI 应为 false（失败兜底）")
@@ -83,7 +83,7 @@ final class FrameAnalyzerTests: XCTestCase {
         let mock = MockAIService(level: .distracted)
         let analyzer = makeAnalyzer(service: mock)
 
-        let r = await analyzer.tick(captureOverride: { img })
+        let r = await analyzer.tick(captureOverride: { single(img) })
 
         // 首帧返回 distracted，应被视为跳变进入非专注状态
         XCTAssertTrue(r.hasChanged, "首帧 AI 返回 .distracted 时 hasChanged 应为 true，遮罩才能弹出")
@@ -101,7 +101,7 @@ final class FrameAnalyzerTests: XCTestCase {
         let mock = MockAIService(level: .wandering)
         let analyzer = makeAnalyzer(service: mock)
 
-        let r = await analyzer.tick(captureOverride: { img })
+        let r = await analyzer.tick(captureOverride: { single(img) })
 
         XCTAssertTrue(r.hasChanged, "首帧 AI 返回 .wandering 时 hasChanged 应为 true")
     }
@@ -112,7 +112,7 @@ final class FrameAnalyzerTests: XCTestCase {
         let mock = MockAIService(level: .fully)
         let analyzer = makeAnalyzer(service: mock)
 
-        let r = await analyzer.tick(captureOverride: { img })
+        let r = await analyzer.tick(captureOverride: { single(img) })
 
         // 首帧专注中，不应触发遮罩
         XCTAssertFalse(r.hasChanged, "首帧 AI 返回 .fully 时 hasChanged 应为 false，避免误弹遮罩")
@@ -126,11 +126,11 @@ final class FrameAnalyzerTests: XCTestCase {
         let analyzer = makeAnalyzer(service: mock)
 
         // 首帧：fully
-        _ = await analyzer.tick(captureOverride: { imgA })
+        _ = await analyzer.tick(captureOverride: { single(imgA) })
 
         // 第二帧：切到 distracted
         await mock.setLevel(.distracted)
-        let r = await analyzer.tick(captureOverride: { imgB })
+        let r = await analyzer.tick(captureOverride: { single(imgB) })
 
         XCTAssertTrue(r.hasChanged, "从 fully 到 distracted 应视为跳变，hasChanged=true")
     }
@@ -143,10 +143,10 @@ final class FrameAnalyzerTests: XCTestCase {
         let analyzer = makeAnalyzer(service: mock)
 
         // 首帧：fully（maxAIInterval 设超短让第二帧也能过 dHash 门）
-        _ = await analyzer.tick(captureOverride: { imgA })
+        _ = await analyzer.tick(captureOverride: { single(imgA) })
 
         // 第二帧：仍然 fully（不同图确保过 dHash）
-        let r = await analyzer.tick(captureOverride: { imgB })
+        let r = await analyzer.tick(captureOverride: { single(imgB) })
 
         XCTAssertFalse(r.hasChanged, "连续 fully 不应视为跳变，hasChanged=false")
     }
@@ -173,10 +173,10 @@ final class FrameAnalyzerTests: XCTestCase {
         )
 
         // 首帧（firstFrame，distance 字段 null）
-        _ = await analyzer.tick(captureOverride: { imgA })
+        _ = await analyzer.tick(captureOverride: { single(imgA) })
 
         // 第二帧（图不同，distance 应非 0）
-        _ = await analyzer.tick(captureOverride: { imgB })
+        _ = await analyzer.tick(captureOverride: { single(imgB) })
 
         // 读取日志，解析所有行
         let content = try String(contentsOf: logURL, encoding: .utf8)
@@ -254,4 +254,10 @@ actor MockAIService: AIService {
     func summarize(_ input: SummaryInput) async throws -> String {
         "mock summary"
     }
+}
+
+/// 单屏帧便捷构造：displayID 取真实主屏 ID，`frames.mainDisplayFrame()` 必然选中它。
+/// 供各测试把"单张 CGImage"机械迁移成 [DisplayFrame]（多屏改造阶段 1 签名变更）。
+func single(_ img: CGImage) -> [DisplayFrame] {
+    [DisplayFrame(displayID: CGMainDisplayID(), image: img)]
 }

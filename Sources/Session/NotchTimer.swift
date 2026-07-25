@@ -22,6 +22,18 @@ enum NotchStyle {
     /// 例如：刘海 220 + extension 110 → 岛总宽 440。
     static let expandedSideExtension: CGFloat = 110
 
+    /// 无刘海屏的紧凑间距：展开态宽度公式与展开态顶行中段下限用。
+    /// 折叠态不用它——折叠态中段是"虚拟刘海"（notchWidth 回退 220 + collapsedMiddleExtra）；
+    /// 有刘海屏更不用——那里的"间距"是物理刘海宽度。
+    static let collapsedCompactGap: CGFloat = 8
+
+    /// 无刘海屏展开态宽度下限。
+    /// 无刘海公式 2×expandedSideExtension + compactGap 只有 228pt，
+    /// 展开态失去"刘海占位"这个宽度锚点，promise / reasoning 文字会被截断。
+    /// 与有刘海典型展开宽（刘海 220 + 两侧扩展 2×110 = 440）对齐：
+    /// 公式结果低于此值时抬到 440，给菜单栏下方内容区足够横向空间。
+    static let minExpandedWidthNoNotch: CGFloat = 440
+
     /// 折叠态圆环直径
     /// 视觉平衡：圆环 18 + level 图标 16，两侧观感等重；
     /// 旧值 22 + 14 偏向右重，环像耳坠左像针眼。
@@ -76,13 +88,138 @@ enum NotchStyle {
 
 /// 刘海岛的折叠 / 展开几何尺寸。
 ///
-/// 由 `NotchTimer.islandGeometry` 统一计算，三处调用方（currentIslandRect /
-/// NotchView / createWindow）都从这里读，不再各自重复 autoDetect 分支逻辑。
+/// 由 `IslandGeometry.compute(...)` 统一计算，调用方（各屏 controller 的
+/// currentIslandRect / NotchView / createWindow、NotchTimer 兼容壳）都从这里读，
+/// 不再各自重复 autoDetect 分支逻辑。
 struct IslandGeometry {
     /// 折叠态尺寸（宽 = 内容驱动；高 = 菜单栏高度）
     let collapsed: CGSize
     /// 展开态尺寸（宽 = notchWidth + 两侧扩展；高 = NotchStyle.expandedHeight）
     let expanded: CGSize
+    /// 该屏是否有物理刘海——无刘海屏折叠态不留假刘海空白
+    let hasNotch: Bool
+    /// 物理刘海宽度（pt）。仅 hasNotch=true 时参与布局
+    let notchWidth: CGFloat
+    /// 菜单栏高度（含刘海机型的刘海高度）
+    let menuBarHeight: CGFloat
+
+    /// 新字段全部带默认值——旧的 `IslandGeometry(collapsed:expanded:)` 构造点不破坏（additive）
+    init(collapsed: CGSize, expanded: CGSize,
+         hasNotch: Bool = true, notchWidth: CGFloat = 220, menuBarHeight: CGFloat = 24) {
+        self.collapsed = collapsed
+        self.expanded = expanded
+        self.hasNotch = hasNotch
+        self.notchWidth = notchWidth
+        self.menuBarHeight = menuBarHeight
+    }
+}
+
+extension IslandGeometry {
+    /// 纯函数工厂——不读 NSScreen，CI 可测。
+    ///
+    /// 有刘海分支公式与改版前 `NotchTimer.islandGeometry` 逐项相等（硬要求，
+    /// NotchGeometryTests 原样通过即证据）；无刘海分支：
+    /// - 折叠态宽 = 与有刘海同公式（notchWidth 走 220 回退当"虚拟刘海"，302pt）
+    ///   ——早期版本用 82pt 紧凑胶囊，宽屏上过于局促（用户真机反馈）
+    /// - 展开态宽 = max(2×expandedSideExtension + compactGap, minExpandedWidthNoNotch)
+    ///   ——紧凑公式只有 228pt 会截断 promise/reasoning，用下限 440 锚住展开宽度
+    static func compute(hasNotch: Bool, notchWidth: CGFloat, menuBarHeight: CGFloat) -> IslandGeometry {
+        let collapsedW: CGFloat
+        let collapsedH: CGFloat
+        let expandedW: CGFloat
+
+        if NotchStyle.autoDetect {
+            // 折叠态：两侧 padding + 左端 level 图标 + 中段 + 右端进度圆环
+            let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
+            if hasNotch {
+                // 中段 = 物理刘海宽 + 额外留白（与旧实现逐项相等）
+                collapsedW = sidePad + NotchStyle.levelIconSize
+                           + (notchWidth + NotchStyle.collapsedMiddleExtra)
+                           + NotchStyle.progressRingSize + sidePad
+                // 展开态：物理刘海宽 + 两侧各扩展 expandedSideExtension（与旧实现逐项相等）
+                expandedW = notchWidth + 2 * NotchStyle.expandedSideExtension
+            } else {
+                // 无刘海屏：折叠态与有刘海同公式——notchWidth 走 220 回退当"虚拟刘海"，
+                // 两屏折叠态同宽（302），跨屏视觉一致（82 紧凑胶囊在宽屏上过于局促）
+                collapsedW = sidePad + NotchStyle.levelIconSize
+                           + (notchWidth + NotchStyle.collapsedMiddleExtra)
+                           + NotchStyle.progressRingSize + sidePad
+                // 展开态：紧凑公式（228）失去刘海占位这个宽度锚点，
+                // 用 minExpandedWidthNoNotch（440，对齐有刘海典型宽）兜底，避免内容截断
+                expandedW = max(2 * NotchStyle.expandedSideExtension + NotchStyle.collapsedCompactGap,
+                                NotchStyle.minExpandedWidthNoNotch)
+            }
+            // 折叠态高度跟随菜单栏；无菜单栏的副屏（罕见配置）回退 24 避免 0 高岛。
+            // 有刘海 / 主屏 / 无头回退路径 menuBarHeight 恒 ≥ 24，max 不改变既有结果。
+            collapsedH = max(menuBarHeight, 24)
+        } else {
+            collapsedW = NotchStyle.manualCollapsedWidth
+            collapsedH = NotchStyle.manualCollapsedHeight
+            expandedW  = NotchStyle.manualExpandedWidth
+        }
+
+        return IslandGeometry(
+            collapsed: CGSize(width: collapsedW, height: collapsedH),
+            expanded:  CGSize(width: expandedW,  height: NotchStyle.expandedHeight),
+            hasNotch: hasNotch,
+            notchWidth: notchWidth,
+            menuBarHeight: menuBarHeight
+        )
+    }
+
+    /// 便捷壳：按屏幕实测参数计算。
+    /// nil（CI 无头环境）按旧行为"有刘海 + 回退值"处理——旧 islandGeometry 不判 hasNotch
+    /// 恒走刘海公式，保证 `NotchTimer.islandGeometry` 兼容壳与现状逐字节一致。
+    @MainActor
+    static func compute(for screen: NSScreen?) -> IslandGeometry {
+        if let screen {
+            return compute(
+                hasNotch: ScreenMetrics.hasNotchedDisplay(for: screen),
+                notchWidth: ScreenMetrics.notchWidth(for: screen),
+                menuBarHeight: ScreenMetrics.menuBarHeight(for: screen)
+            )
+        }
+        return compute(
+            hasNotch: true,
+            notchWidth: ScreenMetrics.notchWidth(for: nil),
+            menuBarHeight: ScreenMetrics.menuBarHeight(for: nil)
+        )
+    }
+
+    /// 展开态顶行（topNotchRow）中段宽度——三段式「左 capsule 区 / 中段 / 右 timer 区」的中段。
+    ///
+    /// - 有刘海屏：恒等于 notchWidth（物理刘海占位），与改版前逐像素一致（硬约束）
+    /// - 无刘海屏：展开总宽 - 两侧凹陷区（2×expandedSideExtension），
+    ///   让顶行三段合计 = expanded.width，capsule / timer 两端 flank 铺满岛宽；
+    ///   极端窄岛（展开宽 < 2×ext）回退 collapsedCompactGap，不出负宽
+    var expandedTopRowMiddleWidth: CGFloat {
+        if hasNotch { return notchWidth }
+        return max(expanded.width - 2 * NotchStyle.expandedSideExtension,
+                   NotchStyle.collapsedCompactGap)
+    }
+
+    /// 当前岛实际矩形（panel-local 坐标）——矩形数学纯函数，
+    /// NotchIslandController 与 NotchTimer 兼容壳共用，保证旧测试断言路径仍然有效。
+    /// - isExpanded: 由调用方按自身 hovering + 全局 forceExpandUntil 算出
+    /// - isFlipped: NSHostingView.isFlipped — true 时 y=0 是顶，false 时 y=0 是底
+    func islandRect(isExpanded: Bool, in panelSize: NSSize, isFlipped: Bool) -> NSRect {
+        // 不再下移：菜单栏区有了 timer/status 内容后，3pt 偏移变成可见空隙，
+        // 接受顶部 concave 角点 1pt stroke 被屏幕顶截掉的代价（曲线本体在 y≥0 内不受影响）
+        let topInset: CGFloat = 0
+        let islandSize = isExpanded ? expanded : collapsed
+
+        let x = (panelSize.width - islandSize.width) / 2
+        // SwiftUI VStack 顶端对齐 panel 顶；岛在 panel 顶往下 topInset 起
+        // isFlipped=true（NSHostingView 默认）：y=0=顶 → islandY = topInset
+        // isFlipped=false（普通 NSView）：y=panelH=顶 → islandY = panelH - topInset - islandH
+        let y: CGFloat
+        if isFlipped {
+            y = topInset
+        } else {
+            y = panelSize.height - topInset - islandSize.height
+        }
+        return NSRect(x: x, y: y, width: islandSize.width, height: islandSize.height)
+    }
 }
 
 // MARK: - 状态
@@ -118,9 +255,6 @@ final class NotchTimer: ObservableObject {
     @Published var softReminderMessage: String = ""
     @Published var softReminderLevel: SoftReminderLevel = .none
 
-    /// 鼠标是否在岛上 hover——存这里让 PassthroughHostingView 能 query 算 hit rect
-    @Published var hovering: Bool = false
-
     /// 本次会话起始时间——TimelineBar 算 bin 边界用绝对时间。
     /// show() 时设，hide() 时清。
     @Published var sessionStart: Date? = nil
@@ -129,12 +263,62 @@ final class NotchTimer: ObservableObject {
     /// 长度上限：planned/captureInterval（约 720 for 60min @5s）；不裁剪即可。
     @Published var timeline: [TimelineEntry] = []
 
-    private var window: NSPanel?
-    private var mouseLocalMonitor: Any?
-    private var mouseGlobalMonitor: Any?
-    private var hoverPollTimer: Timer?
+    /// 每屏一座岛，key = CGDirectDisplayID。
+    /// 由 syncControllers() 按 NSScreen.screens diff 维护；hide() 全量 teardown 后清空。
+    private(set) var controllers: [CGDirectDisplayID: NotchIslandController] = [:]
 
-    private init() {}
+    /// 屏幕参数变化（热插拔 / 分辨率 / 排列）通知的观察 token——随 singleton 生命周期，无需手动移除
+    private var screenParamsObserver: NSObjectProtocol?
+    /// 热插拔 0.3s 合并防抖任务——新通知到来时取消上一个，只重建最后一次
+    private var screenChangeDebounceTask: Task<Void, Never>?
+
+    private init() {
+        // 屏幕热插拔 / 分辨率变化监听。该通知一次插拔会连发多条（含分辨率中间态），
+        // 统一走 0.3s 合并防抖后再重建，避免短时间反复 teardown/show。
+        screenParamsObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleScreenParametersChanged()
+            }
+        }
+    }
+
+    /// hovering 已下沉到各屏 NotchIslandController（hover 只展开被 hover 的那座岛）。
+    /// 这里是主屏 controller 的代理兼容壳——测试与旧调用方零改动；
+    /// 无 controller（测试环境未 show()）时恒 false、写入静默丢弃。
+    var hovering: Bool {
+        get { mainController?.hovering ?? false }
+        set { mainController?.hovering = newValue }
+    }
+
+    /// 主屏对应的 controller；取不到时退任意一座（保证代理有确定性去向）
+    private var mainController: NotchIslandController? {
+        if let mainID = NSScreen.main?.displayID, let c = controllers[mainID] {
+            return c
+        }
+        return controllers.values.first
+    }
+
+    /// 按当前屏幕集合 diff controllers——show() 与后续热插拔阶段共用。
+    /// 新屏建 controller、拔掉的屏 teardown 后移除（teardown 配对释放，防泄漏）。
+    func syncControllers() {
+        var alive: Set<CGDirectDisplayID> = []
+        for screen in NSScreen.screens {
+            guard let id = screen.displayID else { continue }
+            alive.insert(id)
+            if controllers[id] == nil {
+                controllers[id] = NotchIslandController(screen: screen, state: self)
+            }
+        }
+        let stale = controllers.keys.filter { !alive.contains($0) }
+        for id in stale {
+            controllers[id]?.teardown()
+            controllers.removeValue(forKey: id)
+        }
+    }
 
     func show(promise: String, plannedSeconds: Int) {
         self.promise = promise
@@ -142,90 +326,58 @@ final class NotchTimer: ObservableObject {
         // 重置 timeline——上一次会话残留数据不能复用到本次
         self.sessionStart = Date()
         self.timeline.removeAll()
-        if window == nil { createWindow() }
-        window?.orderFrontRegardless()
+        syncControllers()
+        for controller in controllers.values {
+            controller.show()
+        }
     }
 
     func hide() {
-        window?.orderOut(nil)
-        window = nil
+        for controller in controllers.values {
+            controller.teardown()
+        }
+        controllers.removeAll()
         forceExpandUntil = nil
         sessionStart = nil
         timeline.removeAll()
-        stopMouseTracking()
+    }
+
+    // MARK: - 屏幕热插拔
+
+    /// 屏幕参数变化通知入口——0.3s 合并防抖：一次插拔 / 改分辨率会连发多条通知，
+    /// 只重建最后一次（任务可取消，重建前 cancel 上一个）。
+    private func handleScreenParametersChanged() {
+        screenChangeDebounceTask?.cancel()
+        screenChangeDebounceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            self?.rebuildControllersForScreenChange()
+        }
+    }
+
+    /// 热插拔 / 分辨率 / 排列变化后全重建全部岛。
+    /// 全重建而非 diff：分辨率 / 排列变化时，存活屏的旧 panel frame 也已失效，diff 无意义。
+    /// 业务状态（remaining / level / timeline / forceExpandUntil）都在 NotchTimer 本体，
+    /// 重建只换各屏 panel 与几何——重建后 UI 立即恢复，剩余时间 / 级别 / 时间线不丢。
+    /// 连续触发 N 次结果一致（幂等）；镜像屏（NSScreen.screens 含镜像对）会在同一
+    /// 物理输出上重叠显示相同内容，无害不处理。
+    private func rebuildControllersForScreenChange() {
+        // 未在显示（controllers 为空）时通知空转，零成本
+        guard !controllers.isEmpty else { return }
+        for controller in controllers.values {
+            controller.teardown()   // 配对释放：关窗 + 摘两个 monitor + invalidate Timer
+        }
+        controllers.removeAll()
+        syncControllers()
+        for controller in controllers.values {
+            controller.show()
+        }
     }
 
     /// SessionManager 每写一条 AnalysisRecord 就调一次，按 createdAt 追加。
     /// 顺序由调用方保证（5s tick 串行）；这里不做去重 / 排序。
     func appendAnalysis(at timestamp: Date, level: FocusLevel) {
         timeline.append(TimelineEntry(timestamp: timestamp, level: level))
-    }
-
-    private func stopMouseTracking() {
-        if let m = mouseLocalMonitor { NSEvent.removeMonitor(m); mouseLocalMonitor = nil }
-        if let m = mouseGlobalMonitor { NSEvent.removeMonitor(m); mouseGlobalMonitor = nil }
-        hoverPollTimer?.invalidate()
-        hoverPollTimer = nil
-    }
-
-    /// 用全局鼠标位置驱动 panel.ignoresMouseEvents：
-    /// - 鼠标进入岛实际矩形 → panel 接收事件 + state.hovering=true（SwiftUI 展开）
-    /// - 鼠标离开 → panel.ignoresMouseEvents=true 全穿透，下方应用能点击
-    /// - forceExpandUntil 期间永远保持接收（不让用户错过软提醒）
-    fileprivate func startMouseTracking() {
-        let handler: (NSEvent?) -> Void = { [weak self] _ in
-            self?.refreshHoverState()
-        }
-        // Local: 鼠标在本 App 上（panel 接收事件时）
-        mouseLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown]) { event in
-            handler(event); return event
-        }
-        // Global: 鼠标在其他 App 上（panel ignoresMouseEvents=true 期间穿透时）
-        mouseGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDown]) { event in
-            handler(event)
-        }
-        // 兜底轮询：mouseMoved 在鼠标停下后不再 fire（用户快速移到岛上停住就卡住），
-        // 必须主动轮询。注意 RunLoop mode：
-        // - scheduledTimer 默认只在 .default 跑，鼠标快速移动时会切到 .eventTracking，Timer 暂停
-        // - 用 .common 包含 default + eventTracking + modal，任何模式都跑
-        let t = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
-            self?.refreshHoverState()
-        }
-        RunLoop.main.add(t, forMode: .common)
-        hoverPollTimer = t
-    }
-
-    private func refreshHoverState() {
-        guard let panel = window else { return }
-        let mouseGlobal = NSEvent.mouseLocation
-        let panelFrame = panel.frame
-
-        // currentIslandRect 返回 panel-local (isFlipped=false 时 y 向上)
-        let islandLocal = currentIslandRect(in: panelFrame.size, isFlipped: false)
-        // 转全局 (NSScreen) 坐标
-        let islandGlobal = NSRect(
-            x: panelFrame.origin.x + islandLocal.minX,
-            y: panelFrame.origin.y + islandLocal.minY,
-            width: islandLocal.width,
-            height: islandLocal.height
-        )
-        // hot zone 各边扩展 4pt：
-        // - NSRect.contains 是半开区间 [min, max)，鼠标 y=screen.frame.maxY 时刚好等于
-        //   islandGlobal.maxY 不算命中——屏幕物理顶卡死
-        // - 物理刘海机型上鼠标在刘海区会被 macOS 略微钳制，几像素误差
-        let hotZone = islandGlobal.insetBy(dx: -4, dy: -4)
-        let inside = hotZone.contains(mouseGlobal)
-
-        // forceExpand 期间（distract 红色描边 / idle 持续展开）保持接收点击
-        let forceExpanded = (forceExpandUntil ?? .distantPast) > Date()
-
-        let shouldReceive = inside || forceExpanded
-        if panel.ignoresMouseEvents != !shouldReceive {
-            panel.ignoresMouseEvents = !shouldReceive
-        }
-        if hovering != inside {
-            hovering = inside
-        }
     }
 
     func update(remaining: TimeInterval, level: FocusLevel?) {
@@ -257,32 +409,13 @@ final class NotchTimer: ObservableObject {
         self.forceExpandUntil = .distantFuture
     }
 
-    /// 当前岛实际矩形。
+    /// 当前岛实际矩形——主屏兼容壳，矩形数学复用共享纯函数
+    /// （实际生产路径在各屏 NotchIslandController.currentIslandRect）。
     /// - panelSize: NSHostingView.bounds.size
     /// - isFlipped: NSHostingView.isFlipped — true 时 y=0 是顶，false 时 y=0 是底
-    /// PassthroughHostingView.hitTest 用这个判断鼠标点是否在岛上，
-    /// 岛外区域返回 nil 让点击穿透到下方应用。
     func currentIslandRect(in panelSize: NSSize, isFlipped: Bool = true) -> NSRect {
         let isExpanded = hovering || (forceExpandUntil.map { $0 > Date() } ?? false)
-        // 不再下移：菜单栏区有了 timer/status 内容后，3pt 偏移变成可见空隙，
-        // 接受顶部 concave 角点 1pt stroke 被屏幕顶截掉的代价（曲线本体在 y≥0 内不受影响）
-        let topInset: CGFloat = 0
-
-        // 从单一来源读岛尺寸，不再各算各的
-        let geo = islandGeometry
-        let islandSize = isExpanded ? geo.expanded : geo.collapsed
-
-        let x = (panelSize.width - islandSize.width) / 2
-        // SwiftUI VStack 顶端对齐 panel 顶；岛在 panel 顶往下 topInset 起
-        // isFlipped=true（NSHostingView 默认）：y=0=顶 → islandY = topInset
-        // isFlipped=false（普通 NSView）：y=panelH=顶 → islandY = panelH - topInset - islandH
-        let y: CGFloat
-        if isFlipped {
-            y = topInset
-        } else {
-            y = panelSize.height - topInset - islandSize.height
-        }
-        return NSRect(x: x, y: y, width: islandSize.width, height: islandSize.height)
+        return islandGeometry.islandRect(isExpanded: isExpanded, in: panelSize, isFlipped: isFlipped)
     }
 
     /// 停止 idle / wandering 软提醒（用户回来动一下 / hover 岛 / level 切换）
@@ -297,95 +430,12 @@ final class NotchTimer: ObservableObject {
 
     // MARK: - 岛尺寸 Single Source
 
-    /// 折叠 / 展开几何尺寸的单一来源。
-    ///
-    /// currentIslandRect、NotchView 的宽高属性、createWindow 的 panel 初始尺寸
-    /// 都从这里读，保证三处数字完全一致，改参数只需改 NotchStyle 常量一处。
+    /// 折叠 / 展开几何尺寸的主屏兼容壳——公式已集中到 IslandGeometry.compute，
+    /// 各屏 controller 用 `IslandGeometry.compute(for: 自己的屏)`。
+    /// 保留此壳让 NotchGeometryTests 等旧调用方零改动（有刘海主屏 / 无头环境下
+    /// 与改版前逐项相等）。
     var islandGeometry: IslandGeometry {
-        let collapsedW: CGFloat
-        let collapsedH: CGFloat
-        let expandedW: CGFloat
-
-        if NotchStyle.autoDetect {
-            // 折叠态：两侧 padding + 左端 level 图标 + 物理刘海宽 + 右端进度圆环
-            let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
-            collapsedW = sidePad + NotchStyle.levelIconSize
-                       + (ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra)
-                       + NotchStyle.progressRingSize + sidePad
-            // 折叠态高度跟随菜单栏
-            collapsedH = ScreenMetrics.menuBarHeight
-            // 展开态：物理刘海宽 + 两侧各扩展 expandedSideExtension
-            expandedW = ScreenMetrics.notchWidth + 2 * NotchStyle.expandedSideExtension
-        } else {
-            collapsedW = NotchStyle.manualCollapsedWidth
-            collapsedH = NotchStyle.manualCollapsedHeight
-            expandedW  = NotchStyle.manualExpandedWidth
-        }
-
-        return IslandGeometry(
-            collapsed: CGSize(width: collapsedW, height: collapsedH),
-            expanded:  CGSize(width: expandedW,  height: NotchStyle.expandedHeight)
-        )
-    }
-
-    private func createWindow() {
-        guard let screen = NSScreen.main else { return }
-        // panel 尺寸用 expanded 上限做窗口大小；岛在内部居中缩放
-        // 从单一来源读展开态宽度，与 currentIslandRect / NotchView 保持一致
-        let maxExpandedW = islandGeometry.expanded.width
-        let panelW = maxExpandedW + 40
-        let panelH = NotchStyle.expandedHeight + 8
-        let origin = NSPoint(
-            x: screen.frame.midX - panelW / 2,
-            y: screen.frame.maxY - panelH  // 顶贴菜单栏（仅折叠态贴顶；展开态由 VStack padding 下移）
-        )
-        let panel = FloatingNotchPanel(
-            contentRect: NSRect(origin: origin, size: NSSize(width: panelW, height: panelH)),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered, defer: false
-        )
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.level = NSWindow.Level(Int(CGWindowLevelForKey(.statusWindow)))
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        panel.acceptsMouseMovedEvents = true
-        // 默认全穿透——下方应用的点击不被拦截
-        // 通过 startMouseTracking() 的 NSEvent 全局监听动态切换：
-        // 鼠标进入岛矩形时 ignoresMouseEvents=false 才接收点击/hover
-        panel.ignoresMouseEvents = true
-        panel.isMovable = false
-        // 用透明 hit-test 的 NSHostingView 而不是默认的 NSHostingController：
-        // NSHostingView 默认 hitTest 在空白区域返回 self（NSPanel 整块吃事件），
-        // 折叠态岛只占很小一块但 panel 矩形 440×158 全部拦截下方点击。
-        // PassthroughHostingView 让 SwiftUI 子视图没命中时返回 nil → 事件穿透。
-        let host = PassthroughHostingView(rootView: NotchView(state: self))
-        host.frame = NSRect(origin: .zero, size: NSSize(width: panelW, height: panelH))
-        host.autoresizingMask = [.width, .height]
-        panel.contentView = host
-        window = panel
-        startMouseTracking()
-    }
-}
-
-private final class FloatingNotchPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-}
-
-/// hitTest 行为修正：直接拿 NotchTimer 算出的当前岛矩形过滤鼠标命中。
-/// 岛之外的整块 panel 区域返回 nil，事件穿透到下方应用。
-/// SwiftUI 默认会让 panel 整个 frame 接收 hit-test（即使透明），所以必须在
-/// NSView 层主动拦截，不能只靠 SwiftUI 自己的 hit-test 推断。
-/// hitTest 兜底：panel.ignoresMouseEvents 已经控制了"事件是否进入 panel"的整体行为，
-/// 这里再加一层 view-local 过滤——避免极端情况下（global monitor 来不及更新）
-/// 点击穿过岛旁边的透明区域命中 self
-private final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        let local = convert(point, from: superview)
-        let islandRect = NotchTimer.shared.currentIslandRect(in: bounds.size, isFlipped: isFlipped)
-        guard islandRect.contains(local) else { return nil }
-        return super.hitTest(point)
+        IslandGeometry.compute(for: .main)
     }
 }
 
@@ -393,11 +443,13 @@ private final class PassthroughHostingView<Content: View>: NSHostingView<Content
 
 struct NotchView: View {
     @ObservedObject var state: NotchTimer
+    @ObservedObject var controller: NotchIslandController
     @State private var now = Date()
-    private var hovering: Bool { state.hovering }
+    private var hovering: Bool { controller.hovering }
 
-    /// 从单一来源读岛尺寸，避免与 currentIslandRect / createWindow 各自重复计算。
-    private var geo: IslandGeometry { state.islandGeometry }
+    /// 从所在屏的 controller 读岛尺寸（每屏几何可能不同：有 / 无刘海），
+    /// 避免与 currentIslandRect / createWindow 各自重复计算。
+    private var geo: IslandGeometry { controller.islandGeometry }
 
     /// 折叠态宽度
     private var collapsedWidth: CGFloat { geo.collapsed.width }
@@ -474,8 +526,9 @@ struct NotchView: View {
             .stroke(borderColor, lineWidth: borderWidth)
         )
         .onHover { isHovering in
-            state.hovering = isHovering
+            controller.hovering = isHovering
             // 用户 hover 到岛 = 已经"看到提醒"，立刻清掉强制展开 + 停 idle/wandering 软提醒
+            // （forceExpandUntil 是全局状态：hover 任意一座岛，全部岛一起收起）
             if isHovering {
                 if state.forceExpandUntil != nil {
                     state.forceExpandUntil = nil
@@ -519,6 +572,9 @@ struct NotchView: View {
                 .foregroundStyle(levelColor)
                 .frame(width: NotchStyle.levelIconSize + 2)
                 .animation(.easeInOut(duration: 0.18), value: state.level)
+            // 中段弹性 Spacer 把图标与圆环撑到岛体两端——有无刘海统一：
+            // 无刘海屏折叠态宽度已按"虚拟刘海"与有刘海同宽（302），
+            // 紧凑间距（maxWidth: collapsedCompactGap）会把内容挤在中央，已废弃
             Spacer(minLength: 0)
             // 右端：进度圆环（露出在物理刘海右侧）
             ProgressRing(
@@ -556,14 +612,15 @@ struct NotchView: View {
     private var expandedContent: some View {
         VStack(spacing: 0) {
             topNotchRow
-                .frame(height: ScreenMetrics.menuBarHeight)
+                .frame(height: geo.menuBarHeight)
             bottomContent
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     /// 顶行三段式（mirror 折叠态：左 level 图标 / 右进度圆环 → 左状态 capsule / 右 timer）
-    /// 三段宽度合计 = expandedSideExtension + notchWidth + expandedSideExtension = 展开总宽
+    /// 有刘海屏三段宽度合计 = expandedSideExtension + notchWidth + expandedSideExtension = 展开总宽；
+    /// 无刘海屏中段换成 compactGap 固定间距。
     /// 内容贴外侧（远离刘海），让左右各自伸到岛尖头部分，视觉对称
     private var topNotchRow: some View {
         HStack(spacing: 0) {
@@ -579,8 +636,9 @@ struct NotchView: View {
             .padding(.leading, 24)
             .frame(width: NotchStyle.expandedSideExtension)
 
-            // 中间——物理刘海占位，不画内容
-            Color.clear.frame(width: ScreenMetrics.notchWidth)
+            // 中间——有刘海屏：物理刘海占位，不画内容；
+            // 无刘海屏：展开宽减两侧凹陷区后的剩余宽，顶行铺满岛体两端 flank
+            Color.clear.frame(width: geo.expandedTopRowMiddleWidth)
 
             // 右侧凹陷区——倒计时，靠右对齐（外侧）
             HStack(spacing: 6) {
@@ -911,7 +969,7 @@ struct ProgressRing: View {
     state.level = .fully
     state.promise = "完成 Vigil 项目刘海调优"
     state.reasoning = "正在 Xcode 编辑 NotchTimer.swift 的圆环组件"
-    return NotchView(state: state)
+    return NotchView(state: state, controller: NotchIslandController(state: state))
         .background(Color.blue.opacity(0.2))
 }
 
@@ -924,6 +982,6 @@ struct ProgressRing: View {
     state.reasoning = "正在浏览 YouTube 推荐视频"
     state.reminder = "刚才在刷 YouTube；回到调试圆环吧"
     state.forceExpandUntil = Date().addingTimeInterval(60)
-    return NotchView(state: state)
+    return NotchView(state: state, controller: NotchIslandController(state: state))
         .background(Color.blue.opacity(0.2))
 }

@@ -10,8 +10,9 @@ struct FrameAnalysisInput: Sendable {
     let promise: String
     let appName: String
     let windowTitles: String
-    /// JPEG 二进制；如为 nil 表示不带图（仅文本判断）
-    let screenshotJPEG: Data?
+    /// 各屏截图的 JPEG 二进制，顺序为显示器物理从左到右（minX 升序，全链路唯一顺序来源）。
+    /// 空数组表示不带图（仅文本判断）。
+    let screenshotJPEGs: [Data]
     /// AI 回复 reasoning / reminder 使用的语言，自然语言名（如 "English" / "Simplified Chinese (简体中文)"）。
     /// 由 SessionManager 在构造 input 时按用户当前语言注入；测试代码可省略走默认值。
     let responseLanguage: String
@@ -20,13 +21,13 @@ struct FrameAnalysisInput: Sendable {
         promise: String,
         appName: String,
         windowTitles: String,
-        screenshotJPEG: Data?,
+        screenshotJPEGs: [Data],
         responseLanguage: String = kDefaultAIResponseLanguage
     ) {
         self.promise = promise
         self.appName = appName
         self.windowTitles = windowTitles
-        self.screenshotJPEG = screenshotJPEG
+        self.screenshotJPEGs = screenshotJPEGs
         self.responseLanguage = responseLanguage
     }
 }

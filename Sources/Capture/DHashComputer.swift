@@ -74,3 +74,41 @@ extension Data {
         map { String(format: "%02x", $0) }.joined()
     }
 }
+
+/// 多屏 dHash 距离求值（纯逻辑：Data 字典进出，无 CGImage 依赖，直接可测）。
+///
+/// 语义约定：
+/// - old == nil 表示 firstFrame：new 中每屏都记 Int.max（视为全新画面，必触发分析）
+/// - new 中 old 没有记录的屏（热插入的新屏）记 Int.max → 必触发分析
+/// - 只对 new 中存在的屏求值：old 里已被拔除的屏自然消失，不参与 max
+/// - new 为空字典：max = 0、maxDisplayID = nil（防御性兜底；生产上 FrameAnalyzer 空帧已先 skip）
+/// - 多屏距离并列时，displayID 较小者胜出（遍历按 displayID 升序 + 严格大于才换 max），结果确定可测
+enum MultiDisplayDHash {
+
+    /// 输入上帧（old）与本帧（new）的 per-display 哈希字典，
+    /// 输出每屏汉明距离 perDisplay、全屏最大距离 max、最大距离所在屏 maxDisplayID。
+    static func distances(
+        old: [CGDirectDisplayID: Data]?,
+        new: [CGDirectDisplayID: Data]
+    ) -> (perDisplay: [CGDirectDisplayID: Int], max: Int, maxDisplayID: CGDirectDisplayID?) {
+        var perDisplay: [CGDirectDisplayID: Int] = [:]
+        var maxDist = 0
+        var maxID: CGDirectDisplayID? = nil
+        for displayID in new.keys.sorted() {
+            let d: Int
+            if let oldHash = old?[displayID], let newHash = new[displayID] {
+                d = DHashComputer.distance(oldHash, newHash)
+            } else {
+                // old 无此屏记录（含 old == nil 的 firstFrame、运行中热插入的新屏）→ 必触发分析
+                d = Int.max
+            }
+            perDisplay[displayID] = d
+            // 首屏必然入选（maxID == nil），之后严格大于才替换 → 并列时小编号屏胜出
+            if maxID == nil || d > maxDist {
+                maxDist = d
+                maxID = displayID
+            }
+        }
+        return (perDisplay, maxDist, maxID)
+    }
+}
