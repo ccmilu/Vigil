@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SwiftUI
 
 /// 分心时全屏覆盖一层半透明黑色，居中显示 AI 的 reminder 文字 + "返回工作"按钮。
@@ -7,12 +8,21 @@ import SwiftUI
 /// - distracted 跳变时调 present()；自动 30 秒后渐隐
 /// - 只能通过"我回来了"按钮主动关闭（ESC、空白处不行）—— 强化"必须确认"的仪式感
 /// - 不强占焦点（用户仍可操作其它 App，但视觉上无法忽略）
+/// - 多屏：每块显示器各盖一份遮罩，任一屏点按钮 → 全部屏一起关
 @MainActor
 final class DistractOverlay {
     static let shared = DistractOverlay()
 
-    private var window: NSWindow?
+    /// 每块屏一个全屏 panel，key 为 displayID
+    private var windows: [CGDirectDisplayID: NSWindow] = [:]
+    /// 最近一次 present 的内容，供屏幕热插拔时按原样重建遮罩
+    private var lastPayload: (reminder: String, promise: String, showSuppress: Bool)?
     private var autoCloseTask: Task<Void, Never>?
+    /// 屏幕参数变化（热插拔 / 分辨率 / 排列）通知的观察 token——随 singleton 生命周期，无需手动移除
+    private var screenParamsObserver: NSObjectProtocol?
+    /// 热插拔 0.3s 合并防抖任务——新通知到来时取消上一个，只重建最后一次
+    private var screenChangeDebounceTask: Task<Void, Never>?
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Vigil", category: "DistractOverlay")
     /// 外部监听 overlay 真正关闭的回调（点按钮 / 自动关 / 主动 dismiss 都会触发）。
     /// FocusSessionManager 用它把"持续分心 30s 再弹"的计时基准从弹窗瞬间挪到关闭瞬间。
     var onClosed: (() -> Void)?
@@ -25,7 +35,19 @@ final class DistractOverlay {
         set { UserDefaults.standard.set(newValue, forKey: "overlay.enabled") }
     }
 
-    private init() {}
+    private init() {
+        // 屏幕热插拔 / 分辨率变化监听（与 NotchTimer 各自独立注册，互不依赖）。
+        // 该通知一次插拔会连发多条，统一走 0.3s 合并防抖后再重建。
+        screenParamsObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleScreenParametersChanged()
+            }
+        }
+    }
 
     /// - showSuppress: 是否显示"本次分心别再弹"按钮（AI 可能误判时给用户兜底，
     ///   通常仅在同一段 distract 内连续弹到第 3 次时由 SessionManager 传 true）
@@ -37,8 +59,45 @@ final class DistractOverlay {
         // 则触发新闭包 → cooldown 从遮罩"被替换"瞬间起算而非用户点关闭时起算。
         // dismissSilently() 只关窗口、取消 autoCloseTask，不触发 onClosed。
         dismissSilently()
-        guard let screen = NSScreen.main else { return }
 
+        // 留存 payload 供屏幕热插拔时按原样重建
+        let payload = (reminder: reminder, promise: promise, showSuppress: showSuppress)
+        lastPayload = payload
+
+        // 每块屏各建一份全屏遮罩；取不到 displayID 的屏跳过并告警
+        for screen in NSScreen.screens {
+            guard let displayID = screen.displayID else {
+                logger.warning("DistractOverlay: 跳过一块无法取得 displayID 的屏（\(screen.localizedName)）")
+                continue
+            }
+            let panel = buildPanel(on: screen, payload: payload)
+            windows[displayID] = panel
+            panel.orderFrontRegardless()
+        }
+
+        // 一块屏都没盖上（无屏 / 全部取不到 displayID）→ 视为未弹出，
+        // 不启动自动关闭计时，wasShown 语义保持与单屏版一致（dismiss 不 fire onClosed）
+        guard !windows.isEmpty else {
+            lastPayload = nil
+            return
+        }
+
+        // 全局只有一个 30s 自动关任务，到点关全部屏
+        autoCloseTask?.cancel()
+        autoCloseTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 30 * 1_000_000_000)
+            if !Task.isCancelled {
+                await MainActor.run { self?.dismiss() }
+            }
+        }
+    }
+
+    /// 在指定屏上建全屏遮罩 panel（配置与单屏版逐项一致，仅 screen 参数化）。
+    /// 闭包两屏共享同一份逻辑：任一屏 onDismiss/onSuppress → dismiss() 全关。
+    private func buildPanel(
+        on screen: NSScreen,
+        payload: (reminder: String, promise: String, showSuppress: Bool)
+    ) -> NSWindow {
         // 用 NSPanel + 全屏覆盖；NSScreen.frame 已含菜单栏，但 setFrame 后内容会自动撑满
         let w = NSPanel(
             contentRect: screen.frame,
@@ -56,9 +115,9 @@ final class DistractOverlay {
 
         let host = NSHostingController(
             rootView: DistractOverlayView(
-                reminder: reminder,
-                promise: promise,
-                showSuppress: showSuppress,
+                reminder: payload.reminder,
+                promise: payload.promise,
+                showSuppress: payload.showSuppress,
                 onDismiss: { [weak self] in self?.dismiss() },
                 onSuppress: { [weak self] in
                     guard let self else { return }
@@ -71,25 +130,70 @@ final class DistractOverlay {
         host.view.autoresizingMask = [.width, .height]
         w.contentViewController = host
         w.setFrame(screen.frame, display: true)
-        w.orderFrontRegardless()
-        window = w
+        return w
+    }
 
-        autoCloseTask?.cancel()
-        autoCloseTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 30 * 1_000_000_000)
-            if !Task.isCancelled {
-                await MainActor.run { self?.dismiss() }
+    // MARK: - 屏幕热插拔
+
+    /// 屏幕参数变化通知入口——0.3s 合并防抖：一次插拔 / 改分辨率会连发多条通知，
+    /// 只重建最后一次（任务可取消，重建前 cancel 上一个）。
+    private func handleScreenParametersChanged() {
+        screenChangeDebounceTask?.cancel()
+        screenChangeDebounceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            self?.rebuildPanelsForScreenChange()
+        }
+    }
+
+    /// 热插拔 / 分辨率 / 排列变化后按 lastPayload 全重建全部屏的遮罩。
+    /// 全重建而非 diff：分辨率 / 排列变化时旧 frame 已失效。
+    /// autoCloseTask 不动——30s 自动关仍从最初弹窗时刻起算，总时长不变。
+    /// 连续触发 N 次结果一致（幂等）；镜像屏（NSScreen.screens 含镜像对）会在同一
+    /// 物理输出上重叠显示相同内容，无害不处理。
+    private func rebuildPanelsForScreenChange() {
+        // 遮罩关着（windows 为空）或无 payload 时通知空转，零成本
+        guard !windows.isEmpty, let payload = lastPayload else { return }
+
+        // 只关旧窗——绝不走 dismiss() / dismissSilently()：
+        // 两者都会取消 autoCloseTask / 清空 lastPayload / 可能 fire onClosed，
+        // 热插拔重建必须保持"一次分心一次遮罩"的对外语义不变
+        for (_, w) in windows {
+            w.orderOut(nil)
+            w.contentViewController = nil
+        }
+        windows.removeAll()
+
+        for screen in NSScreen.screens {
+            guard let displayID = screen.displayID else {
+                logger.warning("DistractOverlay: 热插拔重建时跳过一块无法取得 displayID 的屏（\(screen.localizedName)）")
+                continue
             }
+            let panel = buildPanel(on: screen, payload: payload)
+            windows[displayID] = panel
+            panel.orderFrontRegardless()
+        }
+
+        // 与 present() 同语义：一块屏都没盖上 → 视为未弹出，payload 一并清掉
+        if windows.isEmpty {
+            lastPayload = nil
         }
     }
 
     func dismiss() {
-        let wasShown = (window != nil)
+        let wasShown = !windows.isEmpty
         autoCloseTask?.cancel()
         autoCloseTask = nil
-        window?.orderOut(nil)
-        window?.contentViewController = nil
-        window = nil
+        for (_, w) in windows {
+            w.orderOut(nil)
+            w.contentViewController = nil
+        }
+        // 硬要求：先清空字典和 lastPayload，再 fire onClosed 恰好一次。
+        // 双屏时任一屏按钮回调都会进 dismiss()；若先 fire 再清，
+        // onClosed 闭包（或第二屏按钮的后续回调）重入 dismiss 时会看到
+        // 非空字典再 fire 一次——double-fire 会打乱 FocusSessionManager 的 cooldown 语义
+        windows.removeAll()
+        lastPayload = nil
         if wasShown { onClosed?() }
     }
 
@@ -101,9 +205,12 @@ final class DistractOverlay {
     func dismissSilently() {
         autoCloseTask?.cancel()
         autoCloseTask = nil
-        window?.orderOut(nil)
-        window?.contentViewController = nil
-        window = nil
+        for (_, w) in windows {
+            w.orderOut(nil)
+            w.contentViewController = nil
+        }
+        windows.removeAll()
+        lastPayload = nil
         // 不调 onClosed，由 present() 调用方自行管理 cooldown 计时
     }
 }
