@@ -238,6 +238,9 @@ private struct PromisePanelContent: View {
                     Text(suggestion)
                         .font(.callout)
                         .foregroundStyle(.primary)
+                        // 反问可能 2-3 行，禁止纵向压缩——否则面板高度不足时
+                        // SwiftUI 会把 Text 压成 1 行并以 … 截断
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(10)
                 .background(Color.orange.opacity(0.1), in: .rect(cornerRadius: 6))
