@@ -85,4 +85,82 @@ final class ScreenshotStoreTests: XCTestCase {
         // 本测试仅作文档说明，不做断言。
         // 降级逻辑已在 ScreenshotStore.rootDirectory 中实现，详见 ScreenCaptureManager.swift。
     }
+
+    // MARK: - 多屏改造：sibling 命名推导（_pN）
+
+    /// siblingScreenshotURL：index 2/3 应推导出 `<stem>_p2.jpg` / `<stem>_p3.jpg`，与第一张同目录。
+    func testSiblingScreenshotURLNaming() {
+        let first = URL(fileURLWithPath: "/tmp/some-session/20260725_120000000.jpg")
+
+        let p2 = ScreenshotStore.siblingScreenshotURL(firstURL: first, index: 2)
+        XCTAssertEqual(p2.lastPathComponent, "20260725_120000000_p2.jpg")
+        XCTAssertEqual(p2.deletingLastPathComponent().path, first.deletingLastPathComponent().path,
+                       "sibling 应与第一张同目录")
+
+        let p3 = ScreenshotStore.siblingScreenshotURL(firstURL: first, index: 3)
+        XCTAssertEqual(p3.lastPathComponent, "20260725_120000000_p3.jpg")
+    }
+
+    // MARK: - 多屏改造：existingScreenshotURLs 连续探测
+
+    private func cleanupSession(_ sessionID: UUID) {
+        let dir = ScreenshotStore.rootDirectory.appendingPathComponent(sessionID.uuidString)
+        try? FileManager.default.removeItem(at: dir)
+    }
+
+    /// 第一张不存在 → 返回空数组。
+    func testExistingScreenshotURLs_firstMissing_returnsEmpty() {
+        let urls = ScreenshotStore.existingScreenshotURLs(relativePath: "\(UUID().uuidString)/不存在的文件.jpg")
+        XCTAssertTrue(urls.isEmpty, "第一张不存在应返回空数组")
+    }
+
+    /// 旧单屏数据（只有第一张，无 _pN）→ 返回单元素数组（向后兼容）。
+    func testExistingScreenshotURLs_singleScreenLegacy_returnsSingleElement() {
+        let sessionID = UUID()
+        let fixedDate = Date(timeIntervalSince1970: 1_753_400_000)  // 固定时间戳避免撞名
+        let (firstURL, relative) = ScreenshotStore.newScreenshotURL(sessionID: sessionID, at: fixedDate)
+        defer { cleanupSession(sessionID) }
+        // 只写第一张
+        try! Data("jpg".utf8).write(to: firstURL)
+
+        let urls = ScreenshotStore.existingScreenshotURLs(relativePath: relative)
+        XCTAssertEqual(urls.count, 1, "旧单屏数据应返回单元素数组")
+        XCTAssertEqual(urls[0].lastPathComponent, firstURL.lastPathComponent)
+    }
+
+    /// 双屏数据（第一张 + _p2）→ 返回两个元素，顺序 第一张 → _p2。
+    func testExistingScreenshotURLs_twoScreens_returnsInOrder() {
+        let sessionID = UUID()
+        let fixedDate = Date(timeIntervalSince1970: 1_753_400_001)
+        let (firstURL, relative) = ScreenshotStore.newScreenshotURL(sessionID: sessionID, at: fixedDate)
+        defer { cleanupSession(sessionID) }
+        try! Data("jpg".utf8).write(to: firstURL)
+        let p2 = ScreenshotStore.siblingScreenshotURL(firstURL: firstURL, index: 2)
+        try! Data("jpg".utf8).write(to: p2)
+
+        let urls = ScreenshotStore.existingScreenshotURLs(relativePath: relative)
+        XCTAssertEqual(urls.count, 2)
+        XCTAssertEqual(urls[0].lastPathComponent, firstURL.lastPathComponent)
+        XCTAssertEqual(urls[1].lastPathComponent, p2.lastPathComponent)
+    }
+
+    /// 断号即停：存在 第一张 + _p2 + _p4（缺 _p3）→ 只返回 [第一张, _p2]，
+    /// 容忍 Finder 手动删图造成的空洞，不向后续探测。
+    func testExistingScreenshotURLs_gapStopsProbing() {
+        let sessionID = UUID()
+        let fixedDate = Date(timeIntervalSince1970: 1_753_400_002)
+        let (firstURL, relative) = ScreenshotStore.newScreenshotURL(sessionID: sessionID, at: fixedDate)
+        defer { cleanupSession(sessionID) }
+        try! Data("jpg".utf8).write(to: firstURL)
+        let p2 = ScreenshotStore.siblingScreenshotURL(firstURL: firstURL, index: 2)
+        try! Data("jpg".utf8).write(to: p2)
+        // 故意跳过 _p3，直接写 _p4 制造断号
+        let p4 = ScreenshotStore.siblingScreenshotURL(firstURL: firstURL, index: 4)
+        try! Data("jpg".utf8).write(to: p4)
+
+        let urls = ScreenshotStore.existingScreenshotURLs(relativePath: relative)
+        XCTAssertEqual(urls.count, 2, "断号即停：_p3 缺失后不应继续探测 _p4")
+        XCTAssertEqual(urls[0].lastPathComponent, firstURL.lastPathComponent)
+        XCTAssertEqual(urls[1].lastPathComponent, p2.lastPathComponent)
+    }
 }

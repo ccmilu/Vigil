@@ -471,12 +471,19 @@ final class FocusSessionManager: ObservableObject {
         // 写盘 + 落 AnalysisRecord
         let ctx = modelContainer.mainContext
         var screenshotPath: String? = nil
-        if let image = result.image {
-            // 仅在 analyzed 分支落盘；skip 不存
-            if case .analyzed = result.decision {
-                let (url, relative) = ScreenshotStore.newScreenshotURL(sessionID: session.id, at: result.at)
-                try? ScreenCaptureManager().encodeAndWrite(image, to: url)
-                screenshotPath = relative
+        // 仅在 analyzed 分支落盘；skip 不存
+        if case .analyzed = result.decision, !result.images.isEmpty {
+            // 第一张（minX 序最左屏）沿用现有命名，相对路径照常入库——单屏路径行为与旧版一致
+            let (firstURL, relative) = ScreenshotStore.newScreenshotURL(sessionID: session.id, at: result.at)
+            if let data = try? ScreenCaptureManager.jpegData(result.images[0].image) {
+                try? data.write(to: firstURL, options: .atomic)
+            }
+            screenshotPath = relative
+            // 其余屏按 _pN 推导命名（命名约定集中在 ScreenshotStore），只写盘不入库
+            for (offset, frame) in result.images.dropFirst().enumerated() {
+                guard let data = try? ScreenCaptureManager.jpegData(frame.image) else { continue }
+                let url = ScreenshotStore.siblingScreenshotURL(firstURL: firstURL, index: offset + 2)
+                try? data.write(to: url, options: .atomic)
             }
         }
 

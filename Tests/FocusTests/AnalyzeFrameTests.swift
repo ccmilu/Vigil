@@ -44,7 +44,7 @@ final class AnalyzeFrameTests: XCTestCase {
             promise: "写周报",
             appName: "Pages",
             windowTitles: "周报草稿.pages",
-            screenshotJPEG: Data("fake".utf8)
+            screenshotJPEGs: [Data("fake".utf8)]
         )
         let result = try await service.analyzeFrame(input)
         XCTAssertEqual(result.level, .fully)
@@ -74,11 +74,96 @@ final class AnalyzeFrameTests: XCTestCase {
         let result = try await service.analyzeFrame(
             FrameAnalysisInput(
                 promise: "写周报", appName: "YouTube",
-                windowTitles: "热门视频", screenshotJPEG: Data([0xff, 0xd8])
+                windowTitles: "热门视频", screenshotJPEGs: [Data([0xff, 0xd8])]
             )
         )
         XCTAssertEqual(result.level, .distracted)
         XCTAssertFalse(result.reminder.isEmpty)
+    }
+
+    /// 双图请求体（远程 host）：content = [text, image_url, image_url]，
+    /// 顺序 text → 图1 → 图2，每张都带 detail: "low"。
+    func testAnalyzeFrame_twoImages_remoteHost_requestShape() async throws {
+        FrameStub.responder = { request in
+            let body = request.httpBodyData ?? Data()
+            let json = try! JSONSerialization.jsonObject(with: body) as! [String: Any]
+            let messages = json["messages"] as! [[String: Any]]
+            XCTAssertEqual(messages.count, 2)
+            let userContent = messages[1]["content"] as! [[String: Any]]
+            // text + 2 张图
+            XCTAssertEqual(userContent.count, 3)
+            XCTAssertEqual(userContent[0]["type"] as? String, "text")
+            XCTAssertEqual(userContent[1]["type"] as? String, "image_url")
+            XCTAssertEqual(userContent[2]["type"] as? String, "image_url")
+            // 顺序保持：图1 在前、图2 在后（base64 内容可区分）
+            let img1 = (userContent[1]["image_url"] as! [String: Any])["url"] as! String
+            let img2 = (userContent[2]["image_url"] as! [String: Any])["url"] as! String
+            XCTAssertTrue(img1.hasPrefix("data:image/jpeg;base64,"))
+            XCTAssertTrue(img2.hasPrefix("data:image/jpeg;base64,"))
+            XCTAssertTrue(img1.contains(Data("first".utf8).base64EncodedString()), "第 1 张图应是 first")
+            XCTAssertTrue(img2.contains(Data("second".utf8).base64EncodedString()), "第 2 张图应是 second")
+            // 远程 host：每张都带 detail: "low"
+            let dict1 = userContent[1]["image_url"] as! [String: Any]
+            let dict2 = userContent[2]["image_url"] as! [String: Any]
+            XCTAssertEqual(dict1["detail"] as? String, "low", "远程 host 每张图都应带 detail: low")
+            XCTAssertEqual(dict2["detail"] as? String, "low", "远程 host 每张图都应带 detail: low")
+
+            let respBody = #"""
+            {
+              "choices":[{"message":{"content":"{\"level\":\"fully\",\"reasoning\":\"对照文档写代码\",\"reminder\":\"\"}"}}]
+            }
+            """#.data(using: .utf8)!
+            let resp = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (resp, respBody)
+        }
+
+        let service = OpenAICompatibleService(
+            baseURL: URL(string: "https://api.openai.com/v1")!,  // 非 local，应带 detail
+            model: "gpt-4o-mini",
+            apiKey: "k",
+            session: Self.stubSession()
+        )
+        let input = FrameAnalysisInput(
+            promise: "写代码",
+            appName: "Xcode",
+            windowTitles: "Focus.swift",
+            screenshotJPEGs: [Data("first".utf8), Data("second".utf8)]
+        )
+        let result = try await service.analyzeFrame(input)
+        XCTAssertEqual(result.level, .fully)
+    }
+
+    /// 双图请求体（本地 host）：detail 字段逐张剥离。
+    func testAnalyzeFrame_twoImages_localHost_stripsDetailPerImage() async throws {
+        FrameStub.responder = { request in
+            let body = request.httpBodyData ?? Data()
+            let json = try! JSONSerialization.jsonObject(with: body) as! [String: Any]
+            let messages = json["messages"] as! [[String: Any]]
+            let userContent = messages[1]["content"] as! [[String: Any]]
+            XCTAssertEqual(userContent.count, 3)
+            let dict1 = userContent[1]["image_url"] as! [String: Any]
+            let dict2 = userContent[2]["image_url"] as! [String: Any]
+            XCTAssertNil(dict1["detail"], "本地 host 第 1 张图不应带 detail")
+            XCTAssertNil(dict2["detail"], "本地 host 第 2 张图不应带 detail")
+
+            let respBody = #"""
+            {"choices":[{"message":{"content":"{\"level\":\"fully\",\"reasoning\":\"双屏写码\",\"reminder\":\"\"}"}}]}
+            """#.data(using: .utf8)!
+            let resp = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (resp, respBody)
+        }
+        let service = OpenAICompatibleService(
+            baseURL: URL(string: "http://127.0.0.1:1234/v1")!,
+            model: "qwen", apiKey: "k", session: Self.stubSession()
+        )
+        let result = try await service.analyzeFrame(
+            FrameAnalysisInput(
+                promise: "写代码", appName: "Xcode",
+                windowTitles: "Focus.swift",
+                screenshotJPEGs: [Data([0xff, 0xd8]), Data([0xff, 0xd9])]
+            )
+        )
+        XCTAssertEqual(result.level, .fully)
     }
 
     func testSummarize_returnsRawText() async throws {

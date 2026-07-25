@@ -31,6 +31,7 @@ enum PromptTemplates {
         - 仅当有明确证据表明当前活动与目标无关时，才选 "distracted"。
         - 若活动可能支持目标但关联较弱或不确定，选 "wandering"，不要选 "distracted"。
         - 若与目标存在合理的工作相关连接，优先选 "fully" 而非 "wandering"。
+        - 多屏场景（提供多张截图时）：任一屏出现明确与目标无关的娱乐/社交/购物内容即可判 distracted；仅因副屏播放工作相关材料（文档、参考视频、聊天协作）而主屏不明确时保持宽容。
 
         专注级别：
         - fully：正在直接执行目标的任务，或明确在使用支持工具/材料以完成它。
@@ -66,14 +67,25 @@ enum PromptTemplates {
         """
     }
 
-    static func analyzeFrameUser(promise: String, appName: String, windowTitles: String) -> String {
-        """
+    /// screenshotCount：本次附带的截图张数（=显示器数量）。>1 时追加多屏说明，
+    /// 默认值 1 保持旧调用点（测试 / 纯文本路径）行为不变。
+    static func analyzeFrameUser(
+        promise: String,
+        appName: String,
+        windowTitles: String,
+        screenshotCount: Int = 1
+    ) -> String {
+        var text = """
         用户的专注目标："\(promise)"
 
         Current Context:
         - Active Application: \(appName)
         - Window Titles: \(windowTitles)
         """
+        if screenshotCount > 1 {
+            text += "\n\n附 \(screenshotCount) 张截图，对应 \(screenshotCount) 块显示器，按物理位置从左到右排列，是同一段桌面空间的水平展开。"
+        }
+        return text
     }
 
     // MARK: - 阶段 3：整体复盘
