@@ -162,4 +162,61 @@ final class IslandGeometryEdgeTests: XCTestCase {
         XCTAssertLessThan(formula, NotchStyle.minExpandedWidthNoNotch,
                           "当前常量应触发下限分支；若常量调整使公式超过下限，本断言需同步复核")
     }
+
+    // MARK: - 7. 展开态顶行中段宽（expandedTopRowMiddleWidth）：两端 flank 锚点
+
+    /// Bug 锚点（440 下限的第二部分）：无刘海屏展开宽抬到 440 后，
+    /// 顶行三段式（左 capsule 110 / 中段 / 右 timer 110）的中段若仍是 compactGap(8)，
+    /// 顶行总宽只有 228，在 440 宽岛里居中悬浮（两侧各 ~106pt 空白），
+    /// 与有刘海屏"capsule 贴左外、timer 贴右外"的 flank 语言不一致。
+    /// 修复语义：中段宽 = expanded.width - 2×expandedSideExtension，顶行铺满岛宽。
+
+    /// 有刘海屏：中段恒等于物理刘海宽——与改版前逐像素一致（硬约束，不许动）
+    func testExpandedTopRowMiddleWidth_hasNotch_equalsNotchWidth() {
+        guard NotchStyle.autoDetect else { return }
+        let geo = IslandGeometry.compute(hasNotch: true, notchWidth: 220, menuBarHeight: 24)
+
+        XCTAssertEqual(geo.expandedTopRowMiddleWidth, geo.notchWidth, accuracy: 0.01,
+                       "有刘海顶行中段宽必须恒等于 notchWidth（物理刘海占位，逐像素不变）")
+        XCTAssertEqual(geo.expandedTopRowMiddleWidth, 220, accuracy: 0.01,
+                       "字面量锚点：有刘海中段宽 220")
+        // 顶行三段合计 = 展开总宽（flank 布局的既有不变量）
+        XCTAssertEqual(2 * NotchStyle.expandedSideExtension + geo.expandedTopRowMiddleWidth,
+                       geo.expanded.width, accuracy: 0.01,
+                       "有刘海顶行三段合计应等于展开总宽")
+    }
+
+    /// 无刘海屏：中段 = 展开总宽 - 两侧凹陷区，三段合计铺满 440，不再居中悬浮
+    func testExpandedTopRowMiddleWidth_noNotch_fillsIslandWidth() {
+        guard NotchStyle.autoDetect else { return }
+        let geo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
+
+        XCTAssertEqual(geo.expandedTopRowMiddleWidth,
+                       geo.expanded.width - 2 * NotchStyle.expandedSideExtension,
+                       accuracy: 0.01,
+                       "无刘海顶行中段宽应为 expanded.width - 2×expandedSideExtension")
+        XCTAssertGreaterThanOrEqual(geo.expandedTopRowMiddleWidth,
+                                    NotchStyle.collapsedCompactGap,
+                                    "无刘海中段宽不得低于紧凑间距下限")
+        // 修复核心断言：三段合计 = 展开总宽 → capsule/timer 两端 flank
+        XCTAssertEqual(2 * NotchStyle.expandedSideExtension + geo.expandedTopRowMiddleWidth,
+                       geo.expanded.width, accuracy: 0.01,
+                       "无刘海顶行三段合计应铺满展开总宽（440），不再 228 居中悬浮")
+        // 字面量锚点：440 - 2×110 = 220
+        XCTAssertEqual(geo.expandedTopRowMiddleWidth, 220, accuracy: 0.01,
+                       "字面量锚点：无刘海中段宽 220 = 440 - 2×110")
+    }
+
+    /// 极端窄岛（展开宽 < 2×ext，直接构造的防御性输入）：中段回退 compactGap，不出负宽
+    func testExpandedTopRowMiddleWidth_extremeNarrowIsland_floorsAtCompactGap() {
+        let narrow = IslandGeometry(
+            collapsed: CGSize(width: 82, height: 24),
+            expanded: CGSize(width: 100, height: NotchStyle.expandedHeight),
+            hasNotch: false, notchWidth: 0, menuBarHeight: 24
+        )
+        XCTAssertEqual(narrow.expandedTopRowMiddleWidth, NotchStyle.collapsedCompactGap,
+                       accuracy: 0.01,
+                       "展开宽 < 2×ext 时中段应回退 compactGap（max 下限防负宽）")
+        XCTAssertGreaterThan(narrow.expandedTopRowMiddleWidth, 0)
+    }
 }

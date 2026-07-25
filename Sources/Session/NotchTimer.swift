@@ -183,6 +183,18 @@ extension IslandGeometry {
         )
     }
 
+    /// 展开态顶行（topNotchRow）中段宽度——三段式「左 capsule 区 / 中段 / 右 timer 区」的中段。
+    ///
+    /// - 有刘海屏：恒等于 notchWidth（物理刘海占位），与改版前逐像素一致（硬约束）
+    /// - 无刘海屏：展开总宽 - 两侧凹陷区（2×expandedSideExtension），
+    ///   让顶行三段合计 = expanded.width，capsule / timer 两端 flank 铺满岛宽；
+    ///   极端窄岛（展开宽 < 2×ext）回退 collapsedCompactGap，不出负宽
+    var expandedTopRowMiddleWidth: CGFloat {
+        if hasNotch { return notchWidth }
+        return max(expanded.width - 2 * NotchStyle.expandedSideExtension,
+                   NotchStyle.collapsedCompactGap)
+    }
+
     /// 当前岛实际矩形（panel-local 坐标）——矩形数学纯函数，
     /// NotchIslandController 与 NotchTimer 兼容壳共用，保证旧测试断言路径仍然有效。
     /// - isExpanded: 由调用方按自身 hovering + 全局 forceExpandUntil 算出
@@ -624,8 +636,9 @@ struct NotchView: View {
             .padding(.leading, 24)
             .frame(width: NotchStyle.expandedSideExtension)
 
-            // 中间——有刘海屏：物理刘海占位，不画内容；无刘海屏：固定紧凑间距
-            Color.clear.frame(width: geo.hasNotch ? geo.notchWidth : NotchStyle.collapsedCompactGap)
+            // 中间——有刘海屏：物理刘海占位，不画内容；
+            // 无刘海屏：展开宽减两侧凹陷区后的剩余宽，顶行铺满岛体两端 flank
+            Color.clear.frame(width: geo.expandedTopRowMiddleWidth)
 
             // 右侧凹陷区——倒计时，靠右对齐（外侧）
             HStack(spacing: 6) {
