@@ -1,0 +1,140 @@
+import XCTest
+@testable import Vigil
+
+/// IslandGeometry 边界与锚点测试（多显示器改造的纯函数部分，CI 可测，不读 NSScreen）。
+///
+/// 与 NotchGeometryTests 的分工：
+/// - NotchGeometryTests 用**符号公式**断言（跟随 NotchStyle 常量，常量改了测试照样过）
+/// - 本文件补**字面量锚点**（常量一旦被改立刻 fail）+ 现有文件没覆盖的边界组合
+@MainActor
+final class IslandGeometryEdgeTests: XCTestCase {
+
+    // MARK: - 1. 超大刘海宽度：公式不溢出、不变号
+
+    /// 防御性锚点：notchWidth 远超真实设备（5000pt）时公式仍逐项成立。
+    /// 真实设备刘海 ~200pt 左右，但 compute 是纯函数，输入异常时不应产出负值 / NaN。
+    func testCompute_withHugeNotchWidth_formulaStillHolds() {
+        guard NotchStyle.autoDetect else { return }
+        let huge: CGFloat = 5000
+        let geo = IslandGeometry.compute(hasNotch: true, notchWidth: huge, menuBarHeight: 24)
+        let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
+
+        XCTAssertEqual(geo.expanded.width,
+                       huge + 2 * NotchStyle.expandedSideExtension,
+                       accuracy: 0.01, "超大刘海展开态宽公式应仍成立")
+        XCTAssertEqual(geo.collapsed.width,
+                       sidePad + NotchStyle.levelIconSize
+                       + (huge + NotchStyle.collapsedMiddleExtra)
+                       + NotchStyle.progressRingSize + sidePad,
+                       accuracy: 0.01, "超大刘海折叠态宽公式应仍成立")
+        XCTAssertFalse(geo.collapsed.width.isNaN)
+        XCTAssertFalse(geo.expanded.width.isNaN)
+        XCTAssertGreaterThan(geo.collapsed.width, 0)
+    }
+
+    // MARK: - 2. collapsedH 护栏边界：max(menuBarHeight, 24) 的三段取值
+
+    /// 现有测试只覆盖 menuBarHeight=0；补 12（护栏下）/ 24（恰等护栏）/ 38（护栏上）。
+    func testCollapsedHeightGuardRail_boundaryValues() {
+        guard NotchStyle.autoDetect else { return }
+
+        let below = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 12)
+        XCTAssertEqual(below.collapsed.height, 24, accuracy: 0.01,
+                       "menuBarHeight=12 < 24 应被护栏抬到 24")
+
+        let exact = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
+        XCTAssertEqual(exact.collapsed.height, 24, accuracy: 0.01,
+                       "menuBarHeight=24 恰好等于护栏")
+
+        let above = IslandGeometry.compute(hasNotch: true, notchWidth: 220, menuBarHeight: 38)
+        XCTAssertEqual(above.collapsed.height, 38, accuracy: 0.01,
+                       "menuBarHeight=38 > 24 应原样使用（护栏不压低）")
+        // menuBarHeight 字段原样保留（展开态顶行高度按真实值布局，不走护栏）
+        XCTAssertEqual(above.menuBarHeight, 38, accuracy: 0.01)
+        XCTAssertEqual(below.menuBarHeight, 12, accuracy: 0.01)
+    }
+
+    // MARK: - 3. islandRect 的 isFlipped 两分支 × 展开/折叠 全组合 y 换算
+
+    /// 现有测试只断言 (折叠, isFlipped=false) 一个组合的 y；这里 4 组合全覆盖 + x 居中。
+    /// 生产调用链：PassthroughHostingView.hitTest 传自身 isFlipped（NSHostingView 默认 true），
+    /// refreshHoverState 算全局坐标时传 false（窗口坐标系 y 向上）——两分支都是活代码。
+    func testIslandRect_flippedBranches_fullMatrix() {
+        let geo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
+        let panel = NSSize(width: geo.expanded.width + 200, height: geo.expanded.height + 100)
+
+        // (展开, flipped=true)：y=0 = panel 顶
+        var r = geo.islandRect(isExpanded: true, in: panel, isFlipped: true)
+        XCTAssertEqual(r.minY, 0, accuracy: 0.01, "flipped 展开态 y 应为 0（顶对齐）")
+        XCTAssertEqual(r.width, geo.expanded.width, accuracy: 0.01)
+        XCTAssertEqual(r.height, geo.expanded.height, accuracy: 0.01)
+        XCTAssertEqual(r.minX, (panel.width - geo.expanded.width) / 2, accuracy: 0.01)
+
+        // (展开, flipped=false)：y = panelH - expandedH（y 向上坐标系里贴顶）
+        r = geo.islandRect(isExpanded: true, in: panel, isFlipped: false)
+        XCTAssertEqual(r.minY, panel.height - geo.expanded.height, accuracy: 0.01,
+                       "unflipped 展开态 y 应为 panelH - islandH")
+        XCTAssertEqual(r.width, geo.expanded.width, accuracy: 0.01)
+        XCTAssertEqual(r.height, geo.expanded.height, accuracy: 0.01)
+
+        // (折叠, flipped=true)：y=0
+        r = geo.islandRect(isExpanded: false, in: panel, isFlipped: true)
+        XCTAssertEqual(r.minY, 0, accuracy: 0.01, "flipped 折叠态 y 应为 0")
+        XCTAssertEqual(r.width, geo.collapsed.width, accuracy: 0.01)
+        XCTAssertEqual(r.height, geo.collapsed.height, accuracy: 0.01)
+        XCTAssertEqual(r.minX, (panel.width - geo.collapsed.width) / 2, accuracy: 0.01)
+
+        // (折叠, flipped=false)：y = panelH - collapsedH
+        r = geo.islandRect(isExpanded: false, in: panel, isFlipped: false)
+        XCTAssertEqual(r.minY, panel.height - geo.collapsed.height, accuracy: 0.01,
+                       "unflipped 折叠态 y 应为 panelH - collapsedH")
+        XCTAssertEqual(r.width, geo.collapsed.width, accuracy: 0.01)
+        XCTAssertEqual(r.height, geo.collapsed.height, accuracy: 0.01)
+    }
+
+    // MARK: - 4. panel 比岛窄：x 算出负值不 clamp（文档化现状行为）
+
+    /// createWindow 恒用 expanded.width+40 做 panel 宽，正常不会触发；
+    /// 但纯函数本身不做 clamp——若未来有调用方传更小的 panelSize，
+    /// 负 x 会让岛向左溢出而非静默 clamp。本用例把现状钉住，改动时必须显式确认。
+    func testIslandRect_panelNarrowerThanIsland_negativeXNotClamped() {
+        let geo = IslandGeometry.compute(hasNotch: true, notchWidth: 220, menuBarHeight: 24)
+        let narrow = NSSize(width: geo.collapsed.width - 40, height: 300)
+
+        let r = geo.islandRect(isExpanded: false, in: narrow, isFlipped: true)
+
+        XCTAssertEqual(r.minX, (narrow.width - geo.collapsed.width) / 2, accuracy: 0.01,
+                       "x 公式应为 (panelW - islandW)/2，不做 clamp")
+        XCTAssertLessThan(r.minX, 0, "panel 比岛窄时 x 应为负（现状行为，钉住防静默变更）")
+    }
+
+    // MARK: - 5. NotchStyle 常量字面量锚点（常量漂移警报器）
+
+    /// 现有符号公式测试在常量被改时照样通过（公式两边同步变化）；
+    /// 字面量锚点则会在任何常量调整时立刻 fail——这是特性：
+    /// fail 信息即"几何变了"，确认是有意调整视觉后更新锚点即可。
+    /// 锚点推导（当前常量：topR=8 / bottomR=14 → sidePad=max(8,14)+6=20；
+    /// icon=16 / ring=18 / middleExtra=8 / ext=110 / compactGap=8 / expandedH=150）：
+    /// - 有刘海折叠宽 = 20+16+(220+8)+18+20 = 302
+    /// - 有刘海展开宽 = 220+2×110 = 440
+    /// - 无刘海折叠宽 = 20+16+8+18+20 = 82
+    /// - 无刘海展开宽 = 2×110+8 = 228
+    func testNotchStyleConstantAnchors() {
+        guard NotchStyle.autoDetect else { return }
+
+        let notchGeo = IslandGeometry.compute(hasNotch: true, notchWidth: 220, menuBarHeight: 24)
+        XCTAssertEqual(notchGeo.collapsed.width, 302, accuracy: 0.01,
+                       "锚点 fail = NotchStyle 常量被改动：有刘海折叠宽 302 = 20+16+228+18+20")
+        XCTAssertEqual(notchGeo.expanded.width, 440, accuracy: 0.01,
+                       "锚点 fail = 常量改动：有刘海展开宽 440 = 220+2×110")
+        XCTAssertEqual(notchGeo.collapsed.height, 24, accuracy: 0.01)
+
+        let compactGeo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
+        XCTAssertEqual(compactGeo.collapsed.width, 82, accuracy: 0.01,
+                       "锚点 fail = 常量改动：无刘海折叠宽 82 = 20+16+8+18+20")
+        XCTAssertEqual(compactGeo.expanded.width, 228, accuracy: 0.01,
+                       "锚点 fail = 常量改动：无刘海展开宽 228 = 2×110+8")
+        XCTAssertEqual(compactGeo.expanded.height, 150, accuracy: 0.01,
+                       "锚点 fail = expandedHeight 常量改动（当前 150）")
+    }
+}
