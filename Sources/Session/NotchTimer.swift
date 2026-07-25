@@ -572,13 +572,10 @@ struct NotchView: View {
                 .foregroundStyle(levelColor)
                 .frame(width: NotchStyle.levelIconSize + 2)
                 .animation(.easeInOut(duration: 0.18), value: state.level)
-            if geo.hasNotch {
-                Spacer(minLength: 0)
-            } else {
-                // 无刘海屏：不留跨刘海的大段空白，间距收窄到紧凑上限
-                // （maxWidth 而非固定宽——弹性吸收像素取整，保证内容永不溢出岛体）
-                Spacer(minLength: 0).frame(maxWidth: NotchStyle.collapsedCompactGap)
-            }
+            // 中段弹性 Spacer 把图标与圆环撑到岛体两端——有无刘海统一：
+            // 无刘海屏折叠态宽度已按"虚拟刘海"与有刘海同宽（302），
+            // 紧凑间距（maxWidth: collapsedCompactGap）会把内容挤在中央，已废弃
+            Spacer(minLength: 0)
             // 右端：进度圆环（露出在物理刘海右侧）
             ProgressRing(
                 progress: ringProgress,
