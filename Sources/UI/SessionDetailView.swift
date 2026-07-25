@@ -47,7 +47,7 @@ struct SessionDetailView: View {
     let session: FocusSession
     let onClose: () -> Void
 
-    @State private var previewURL: URL?
+    @State private var previewSelection: ScreenshotPreviewSelection?
     /// 详情页头部 + 每条 record 时间的格式跟随用户语言
     @Environment(\.locale) private var locale
 
@@ -77,8 +77,8 @@ struct SessionDetailView: View {
         }
         .padding(20)
         .frame(width: 760, height: 580)
-        .sheet(item: $previewURL) { url in
-            ScreenshotPreviewSheet(url: url) { previewURL = nil }
+        .sheet(item: $previewSelection) { sel in
+            ScreenshotPreviewSheet(urls: sel.urls) { previewSelection = nil }
         }
     }
 
@@ -149,13 +149,14 @@ struct SessionDetailView: View {
 
     private func segmentRow(_ seg: TimelineSegment) -> some View {
         let r = seg.first
+        // 该帧实际落盘的全部截图（多屏帧返回多张，按物理从左到右；空数组走"无截图"灰块）
+        let urls = screenshotURLs(r.screenshotLocalPath)
         return HStack(alignment: .top, spacing: 8) {
-            // 缩略图：仅在有路径时显示
-            if let url = screenshotURL(r.screenshotLocalPath) {
-                Button { previewURL = url } label: {
-                    AsyncImageThumbnail(url: url, size: CGSize(width: 60, height: 36))
+            // 缩略图：仅在有截图时显示；多屏帧渲染"一叠卡片"
+            if !urls.isEmpty {
+                ScreenshotStackView(urls: urls) {
+                    previewSelection = ScreenshotPreviewSelection(urls: urls)
                 }
-                .buttonStyle(.plain)
             } else {
                 Color.gray.opacity(0.05)
                     .frame(width: 60, height: 36)
@@ -228,10 +229,11 @@ struct SessionDetailView: View {
             .clipShape(.capsule)
     }
 
-    private func screenshotURL(_ relativePath: String?) -> URL? {
-        guard let p = relativePath, !p.isEmpty else { return nil }
-        let url = ScreenshotStore.rootDirectory.appendingPathComponent(p)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    /// 该帧实际落盘的全部截图：旧单屏数据天然返回单元素数组；
+    /// 第一张缺失（如手动删图）返回空数组，走"无截图"灰块分支。
+    private func screenshotURLs(_ relativePath: String?) -> [URL] {
+        guard let p = relativePath, !p.isEmpty else { return [] }
+        return ScreenshotStore.existingScreenshotURLs(relativePath: p)
     }
 
     private func levelBadge(_ level: FocusLevel) -> some View {

@@ -1022,6 +1022,17 @@
         }
       }
     },
+    "屏幕 %lld/%lld · %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen %lld/%lld · %@"
+          }
+        }
+      }
+    },
     "屏幕录制权限" : {
       "extractionState" : "manual",
       "localizations" : {
