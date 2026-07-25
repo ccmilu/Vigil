@@ -26,7 +26,7 @@ final class DistractOverlayTests: XCTestCase {
     /// 第二屏按钮的后续回调重入会再 fire 一次（double-fire 打乱 SessionManager cooldown）。
     /// 硬要求：先清空字典再 fire —— 本用例双 dismiss 钉住单次语义。
     func testDismiss_twice_firesOnClosedExactlyOnce() throws {
-        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过（present 建不了窗，wasShown 恒 false）")
+        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过（R1 后无屏时 present 走零屏路径会 fire 一次 onClosed，干扰本用例计数归因）")
         var count = 0
         overlay.onClosed = { count += 1 }
 
@@ -42,7 +42,7 @@ final class DistractOverlayTests: XCTestCase {
     /// F2 语义：present() 内部用 dismissSilently() 替换旧遮罩，不触发 onClosed。
     /// 清场后 windows 为空，后续 dismiss 的 wasShown=false 不得 fire。
     func testDismissSilently_thenDismiss_neverFires() throws {
-        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过")
+        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过（R1 后无屏时 present 走零屏路径会 fire 一次 onClosed，干扰本用例计数归因）")
         var count = 0
         overlay.onClosed = { count += 1 }
 
@@ -59,7 +59,7 @@ final class DistractOverlayTests: XCTestCase {
     /// 第二次 present 走 dismissSilently 关旧窗——旧闭包绝不能 fire，
     /// 否则 cooldown 会从"遮罩被替换瞬间"起算而非用户真正关闭时。
     func testRePresent_oldOnClosedNotFired_newFiresOnce() throws {
-        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过")
+        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过（R1 后无屏时 present 走零屏路径会 fire 一次 onClosed，干扰本用例计数归因）")
         var oldCount = 0
         var newCount = 0
 
@@ -109,7 +109,7 @@ final class DistractOverlayTests: XCTestCase {
     /// （两者会取消 autoCloseTask / 清 payload / 可能 fire onClosed）。
     /// 重建后 dismiss 恰好 fire 一次 ⟺ 重建保住了 windows 且没碰 onClosed。
     func testScreenChange_rebuildPreservesOnClosedSemantics() async throws {
-        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过")
+        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过（R1 后无屏时 present 走零屏路径会 fire 一次 onClosed，干扰本用例计数归因）")
         var count = 0
         overlay.onClosed = { count += 1 }
 
@@ -131,7 +131,7 @@ final class DistractOverlayTests: XCTestCase {
     /// 防抖到点后 rebuild 必须看到 windows/payload 已清空转而空转；
     /// 若错误复活遮罩，收尾的第二次 dismiss 会再 fire 一次 onClosed（被本断言抓到）。
     func testScreenChange_dismissDuringDebounce_noResurrection() async throws {
-        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过")
+        try XCTSkipIf(NSScreen.screens.isEmpty, "无屏环境跳过（R1 后无屏时 present 走零屏路径会 fire，干扰计数归因）")
         var count = 0
         overlay.onClosed = { count += 1 }
 
@@ -145,5 +145,43 @@ final class DistractOverlayTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 600_000_000)  // 让防抖任务到点执行
         overlay.dismiss()  // 若遮罩被重建复活，这次 dismiss 会再 fire
         XCTAssertEqual(count, 1, "dismiss 后防抖重建不得复活遮罩（windows/lastPayload 已清空）")
+    }
+
+    // MARK: - 7. R1：零屏收尾补 fire onClosed（生命周期结束语义）
+
+    /// R1 语义：onClosed = 本次提醒生命周期结束（无论真显示了还是没能显示）。
+    /// "所有屏取不到 displayID"的零屏路径无法直接驱动（NSScreen 不可 mock，测试宿主必有屏），
+    /// 生产侧把零屏收尾抽成 endLifecycleForZeroScreens()——present() 空字典兜底与
+    /// 热插拔 rebuild 零屏两处调用点均为一行调用（可审计）。本用例锁定该方法契约：
+    /// fire 恰好一次；fire 后状态已清（后续 dismiss / dismissSilently 不得再 fire）。
+    func testZeroScreenEndLifecycle_firesOnClosedExactlyOnce() {
+        var count = 0
+        overlay.onClosed = { count += 1 }
+
+        overlay.endLifecycleForZeroScreens()
+        XCTAssertEqual(count, 1,
+            "零屏收尾必须 fire 一次 onClosed——SessionManager 靠它把 cooldown 从 distantFuture 拉回")
+
+        // 状态已清：后续任何关闭路径不得二次 fire（恰好一次语义与 dismiss 一致）
+        overlay.dismiss()
+        overlay.dismissSilently()
+        XCTAssertEqual(count, 1, "收尾后再 dismiss / dismissSilently 不得二次 fire")
+    }
+
+    /// onClosed 未设置时零屏收尾不得崩（防御锚点）；且收尾幂等不依赖任何窗口存在。
+    func testZeroScreenEndLifecycle_nilOnClosed_noCrash() {
+        overlay.onClosed = nil
+        overlay.endLifecycleForZeroScreens()  // 不崩即通过
+    }
+
+    /// R1 语义锚点（无法单测，注释固化）：present() 在"一块屏都没盖上"时调
+    /// endLifecycleForZeroScreens() 补 fire onClosed；热插拔 rebuild 后零屏同理。
+    /// 若未来有人把这两处调用删掉，SessionManager 的 cooldown 会卡在 distantFuture，
+    /// 该段 distract 提醒被永久静默——上述两个用例无法抓到，只能靠 code review。
+    /// 详见 DistractOverlay.swift endLifecycleForZeroScreens() 注释。
+    func testZeroScreenCallSites_semanticAnchor_documented() {
+        // 语义锚点用例：零屏调用点（present 空字典兜底 / rebuild 零屏）无法经 NSScreen 驱动，
+        // 此处仅固化"两处调用点必须存在"的约定，NOT_VERIFIED by automation。
+        XCTAssertTrue(true, "锚点：present/rebuild 零屏路径必须调 endLifecycleForZeroScreens()")
     }
 }

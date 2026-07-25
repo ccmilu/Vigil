@@ -229,23 +229,29 @@ final class MultiDisplayAdversarialTests: XCTestCase {
             "第一张缺失即返回空（guard first exists），即使 _p2 在盘上也不返回——UI 走无截图分支")
     }
 
-    /// relativePath 为空串：store 层会把 rootDirectory 自身当"第一张"返回（目录存在）。
-    /// 锚点记录实际行为；UI 层 screenshotURLs 有 `!p.isEmpty` guard 挡住，不到达这里。
-    func testExistingScreenshotURLs_emptyRelativePath_returnsRootDir_documented() {
+    /// R2 修复后：relativePath 为空串属非法输入 → 返回空数组。
+    /// （旧行为：rootDirectory 自身存在 → 返回 [root] 目录 URL；UI 层靠 `!p.isEmpty` guard 兜底）
+    func testExistingScreenshotURLs_emptyRelativePath_returnsEmpty() {
         let urls = ScreenshotStore.existingScreenshotURLs(relativePath: "")
-        XCTAssertEqual(urls.count, 1,
-            "空串 → rootDirectory 自身存在 → 返回 [root]（目录 URL）。锚点：UI 层已 guard 空串")
-        XCTAssertTrue(urls[0].hasDirectoryPath, "返回的是目录而非图片文件")
+        XCTAssertTrue(urls.isEmpty,
+            "R2：空串 → 空数组（旧行为返回 [rootDirectory] 目录，已修为防御性拒绝）")
     }
 
-    /// 非法相对路径 "..":路径穿越到父目录（存在）→ 返回 1 个目录 URL。
-    /// 锚点记录实际行为：screenshotLocalPath 生产上只由 newScreenshotURL 生成（UUID/时间戳.jpg），
-    /// 不可达此分支；若未来加防御应返回空。报 lead 知悉（低危）。
-    func testExistingScreenshotURLs_dotDotTraversal_returnsParentDir_documented() {
-        let urls = ScreenshotStore.existingScreenshotURLs(relativePath: "..")
-        XCTAssertEqual(urls.count, 1, ".. 穿越到存在的父目录 → 返回 [父目录 URL]（锚点，低危）")
-        XCTAssertTrue(urls[0].path.hasSuffix(".."),
-            "返回的是未解析的穿越路径（URL.hasDirectoryPath 对 .. 为 false，不能靠它识别目录）")
+    /// R2 修复后：".." 路径穿越属非法输入 → 返回空数组（含前缀 / 中段穿越形态）。
+    /// （旧行为：穿越到存在的父目录 → 返回 1 个目录 URL；低危已修）
+    func testExistingScreenshotURLs_dotDotTraversal_returnsEmpty() {
+        XCTAssertTrue(ScreenshotStore.existingScreenshotURLs(relativePath: "..").isEmpty,
+            "R2：.. 穿越 → 空数组（旧行为返回父目录 URL，已修）")
+        XCTAssertTrue(ScreenshotStore.existingScreenshotURLs(relativePath: "../foo.jpg").isEmpty,
+            "R2：前缀穿越同样拒绝")
+        XCTAssertTrue(ScreenshotStore.existingScreenshotURLs(relativePath: "a/../../b.jpg").isEmpty,
+            "R2：中段穿越同样拒绝")
+    }
+
+    /// R2：绝对路径属非法输入 → 返回空数组（relativePath 契约是相对 rootDirectory 的相对路径）。
+    func testExistingScreenshotURLs_absolutePath_returnsEmpty() {
+        let urls = ScreenshotStore.existingScreenshotURLs(relativePath: "/tmp/whatever.jpg")
+        XCTAssertTrue(urls.isEmpty, "R2：绝对路径 → 空数组")
     }
 
     // MARK: - 任务 9：双屏 tick 全链路
@@ -570,9 +576,10 @@ final class MultiDisplayAdversarialTests: XCTestCase {
         }
     }
 
-    /// IPv6 loopback（[::1]）不在 isLocalHost 白名单 → 按远程处理、detail 保留。
-    /// 锚点记录实际行为：若本地 VLM 严格校验 detail 字段，[::1] 部署会受影响——报 lead 知悉。
-    func testChatVision_ipv6Loopback_treatedAsRemote_documented() async throws {
+    /// R3 修复后：IPv6 loopback（[::1]）按本地处理 → detail 逐张剥离。
+    /// （旧行为：[::1] 不在 isLocalHost 白名单按远程处理、detail 保留——
+    /// 严格校验 detail 字段的本地 VLM 端点会报错，低危已修）
+    func testChatVision_ipv6Loopback_treatedAsLocal() async throws {
         let box = JSONBox()
         AdvStubProtocol.responder = { request in
             let body = request.advHttpBodyData ?? Data()
@@ -591,8 +598,8 @@ final class MultiDisplayAdversarialTests: XCTestCase {
         let messages = json["messages"] as! [[String: Any]]
         let content = messages[1]["content"] as! [[String: Any]]
         let dict = content[1]["image_url"] as! [String: Any]
-        XCTAssertEqual(dict["detail"] as? String, "low",
-            "[::1] 当前按远程处理（isLocalHost 未覆盖 IPv6 loopback）——行为锚点")
+        XCTAssertNil(dict["detail"],
+            "R3：[::1] 应按本地处理，detail 被剥离（旧行为按远程保留 detail，已修）")
     }
 
     /// chatVision 直接传空数组（API 误用，生产路径 analyzeFrame 会分流到 chatText）：

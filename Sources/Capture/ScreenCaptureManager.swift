@@ -235,7 +235,15 @@ enum ScreenshotStore {
     /// 读取侧：给定入库的 screenshotLocalPath（第一张的相对路径），返回实际存在的全部帧截图
     /// （第一张 + 连续 _p2/_p3...，断号即停——容忍 Finder 手动删图造成的空洞）。
     /// 第一张不存在返回空数组；旧单屏数据天然返回单元素数组。
+    /// R2 输入防御：空串 / 绝对路径 / 含 ".." 路径穿越 → 一律返回空（旧行为会把
+    /// rootDirectory 自身或父目录当"第一张"返回）。生产 relative 只由 newScreenshotURL
+    /// 生成（"UUID/时间戳.jpg"），此防御面向未来外部输入。
     static func existingScreenshotURLs(relativePath: String) -> [URL] {
+        guard !relativePath.isEmpty,
+              !relativePath.hasPrefix("/"),
+              !relativePath.split(separator: "/").contains("..") else {
+            return []
+        }
         let first = rootDirectory.appendingPathComponent(relativePath)
         let fm = FileManager.default
         guard fm.fileExists(atPath: first.path) else { return [] }

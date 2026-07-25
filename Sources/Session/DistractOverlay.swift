@@ -23,8 +23,10 @@ final class DistractOverlay {
     /// 热插拔 0.3s 合并防抖任务——新通知到来时取消上一个，只重建最后一次
     private var screenChangeDebounceTask: Task<Void, Never>?
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Vigil", category: "DistractOverlay")
-    /// 外部监听 overlay 真正关闭的回调（点按钮 / 自动关 / 主动 dismiss 都会触发）。
-    /// FocusSessionManager 用它把"持续分心 30s 再弹"的计时基准从弹窗瞬间挪到关闭瞬间。
+    /// 本次提醒生命周期结束的回调：点按钮 / 自动关 / 主动 dismiss，
+    /// 以及"应当弹出/维持但一块屏都没盖上"的零屏路径（R1）都会触发，恰好一次。
+    /// FocusSessionManager 在 present 前把 cooldown 推到 distantFuture，全靠这个回调
+    /// 恢复计时——任何路径漏 fire 都会让该段 distract 提醒被永久静默。
     var onClosed: (() -> Void)?
     /// "本次分心别再弹"按钮的回调。仅当 present(showSuppress: true) 时显示。
     var onSuppress: (() -> Void)?
@@ -75,10 +77,12 @@ final class DistractOverlay {
             panel.orderFrontRegardless()
         }
 
-        // 一块屏都没盖上（无屏 / 全部取不到 displayID）→ 视为未弹出，
-        // 不启动自动关闭计时，wasShown 语义保持与单屏版一致（dismiss 不 fire onClosed）
+        // 一块屏都没盖上（无屏 / 全部取不到 displayID）→ 本次提醒生命周期即刻结束。
+        // R1 修复：onClosed 语义统一为"本次提醒生命周期结束（无论真显示了还是没能显示）"。
+        // SessionManager 调 present 前已把 cooldown 推到 distantFuture，全靠 onClosed 恢复
+        // 计时；零屏路径若不 fire，该段 distract 提醒会被永久静默（直到 level 离开 distracted）
         guard !windows.isEmpty else {
-            lastPayload = nil
+            endLifecycleForZeroScreens()
             return
         }
 
@@ -174,9 +178,10 @@ final class DistractOverlay {
             panel.orderFrontRegardless()
         }
 
-        // 与 present() 同语义：一块屏都没盖上 → 视为未弹出，payload 一并清掉
+        // 与 present() 同语义（R1）：热插拔后一块屏都盖不上 → 本次提醒生命周期结束，
+        // 清状态并 fire 一次 onClosed，恢复 SessionManager 的 cooldown 计时
         if windows.isEmpty {
-            lastPayload = nil
+            endLifecycleForZeroScreens()
         }
     }
 
@@ -212,6 +217,26 @@ final class DistractOverlay {
         windows.removeAll()
         lastPayload = nil
         // 不调 onClosed，由 present() 调用方自行管理 cooldown 计时
+    }
+
+    /// R1：零屏收尾——"应当弹出/维持但一块屏都没盖上"时统一走这里
+    /// （present 空字典兜底、热插拔 rebuild 后零屏，共两处调用点）。
+    /// onClosed 语义 = 本次提醒生命周期结束（无论真显示了还是没能显示）：
+    /// SessionManager 靠它把 cooldown 从 distantFuture 拉回正常计时，
+    /// 不 fire 的话该段 distract 提醒会被永久静默（直到 level 离开 distracted）。
+    /// 顺序硬要求与 dismiss() 相同：先清状态（窗口 / payload / 自动关任务）再 fire，
+    /// 每个生命周期恰好一次（fire 后 lastPayload 为 nil，rebuild 守卫不会重入）。
+    /// NSScreen 不可 mock，零屏路径无法直接驱动——此方法是零屏语义的唯一可测入口。
+    func endLifecycleForZeroScreens() {
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+        for (_, w) in windows {
+            w.orderOut(nil)
+            w.contentViewController = nil
+        }
+        windows.removeAll()
+        lastPayload = nil
+        onClosed?()
     }
 }
 

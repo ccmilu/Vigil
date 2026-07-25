@@ -247,6 +247,9 @@ struct OpenAICompatibleService: AIService {
     private var isLocalHost: Bool {
         guard let host = baseURL.host?.lowercased() else { return false }
         if host == "localhost" || host == "127.0.0.1" { return true }
+        // R3：IPv6 loopback。URL.host 对 http://[::1]:1234/v1 返回 "::1"（不含方括号），
+        // 带方括号形态一并收下，防未来 URL 解析行为差异
+        if host == "::1" || host == "[::1]" { return true }
         if host.hasPrefix("192.168.") { return true }
         if host.hasPrefix("10.") { return true }
         if host.hasSuffix(".local") { return true }
