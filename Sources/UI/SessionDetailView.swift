@@ -2,7 +2,47 @@ import SwiftUI
 import SwiftData
 import AppKit
 
-/// 历史会话详情：promise / 时长 / 分布条 / summary / 每帧时间轴。
+/// 时间轴分段：一帧"锚点"（有信息增量）+ 后续被合并的无增量帧。
+/// 时间轴按段展示，时间显示为区间，不再逐行罗列"复用"帧。
+struct TimelineSegment: Identifiable {
+    let first: AnalysisRecord
+    private(set) var last: AnalysisRecord
+    /// 段内总帧数（锚点帧 + 被合并帧）
+    private(set) var count: Int
+
+    var id: UUID { first.id }
+
+    init(anchor: AnalysisRecord) {
+        first = anchor
+        last = anchor
+        count = 1
+    }
+
+    mutating func extend(with r: AnalysisRecord) {
+        last = r
+        count += 1
+    }
+}
+
+enum TimelineSegmenter {
+    /// 合并规则：非 AI 判定（dHash 复用 / 客户端 idle 帧）且无截图、level 与上一段一致 → 并入上一段。
+    /// AI 超时回落帧有截图（画面确实变了），保留独立行。
+    /// 入参必须先按 createdAt 升序排好。
+    static func makeSegments(from sorted: [AnalysisRecord]) -> [TimelineSegment] {
+        var segs: [TimelineSegment] = []
+        for r in sorted {
+            let mergeable = !r.fromAI && r.screenshotLocalPath == nil
+            if mergeable, !segs.isEmpty, segs[segs.count - 1].first.level == r.level {
+                segs[segs.count - 1].extend(with: r)
+            } else {
+                segs.append(TimelineSegment(anchor: r))
+            }
+        }
+        return segs
+    }
+}
+
+/// 历史会话详情：promise / 时长 / 分布条 / summary / 时间轴（分段合并）。
 struct SessionDetailView: View {
     let session: FocusSession
     let onClose: () -> Void
@@ -96,8 +136,8 @@ struct SessionDetailView: View {
     private var timeline: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 4) {
-                ForEach(sortedRecords(), id: \.id) { r in
-                    recordRow(r)
+                ForEach(TimelineSegmenter.makeSegments(from: sortedRecords())) { seg in
+                    segmentRow(seg)
                 }
             }
         }
@@ -107,8 +147,9 @@ struct SessionDetailView: View {
         session.records.sorted(by: { $0.createdAt < $1.createdAt })
     }
 
-    private func recordRow(_ r: AnalysisRecord) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+    private func segmentRow(_ seg: TimelineSegment) -> some View {
+        let r = seg.first
+        return HStack(alignment: .top, spacing: 8) {
             // 缩略图：仅在有路径时显示
             if let url = screenshotURL(r.screenshotLocalPath) {
                 Button { previewURL = url } label: {
@@ -121,19 +162,11 @@ struct SessionDetailView: View {
                     .clipShape(.rect(cornerRadius: 3))
             }
 
-            Text(r.createdAt.formatted(.dateTime.locale(locale).hour().minute().second()))
-                .font(.caption.monospaced())
-                .foregroundStyle(.tertiary)
-                .frame(width: 70, alignment: .leading)
+            timeColumn(seg)
             levelBadge(r.level)
                 .frame(width: 80, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                // 拆三元：见 ContentView 同样修复
-                if r.reasoning.isEmpty {
-                    Text("(无 AI 推理)").font(.callout)
-                } else {
-                    Text(r.reasoning).font(.callout)
-                }
+                reasoningText(r)
                 if !r.frontAppName.isEmpty {
                     Text(r.frontAppName)
                         .font(.caption2)
@@ -146,17 +179,53 @@ struct SessionDetailView: View {
                     .font(.caption2.monospaced())
                     .foregroundStyle(.tertiary)
             }
-            // 拆三元让 LocalizedStringKey 走对路径（不然推断为 Text(String) verbatim）
-            Group {
-                if r.fromAI { Text("AI") } else { Text("复用") }
-            }
-            .font(.caption2.bold())
-            .padding(.horizontal, 5).padding(.vertical, 1)
-            .background(r.fromAI ? Color.blue.opacity(0.15) : Color.gray.opacity(0.15))
-            .clipShape(.capsule)
+            sourceBadge(r)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
+    }
+
+    /// 时间列：单帧段只显示一个时刻；合并段显示起止区间（第二行）
+    private func timeColumn(_ seg: TimelineSegment) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(seg.first.createdAt.formatted(.dateTime.locale(locale).hour().minute().second()))
+            if seg.count > 1 {
+                // 纯标点连接，走 verbatim 不进字符串目录
+                Text(verbatim: "– \(seg.last.createdAt.formatted(.dateTime.locale(locale).hour().minute().second()))")
+            }
+        }
+        .font(.caption.monospaced())
+        .foregroundStyle(.tertiary)
+        .frame(width: 76, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func reasoningText(_ r: AnalysisRecord) -> some View {
+        if !r.reasoning.isEmpty {
+            Text(r.reasoning).font(.callout)
+        } else if r.level == .idle {
+            Text("(无键鼠操作，标记为空闲)").font(.callout)
+        } else {
+            Text("(无 AI 推理)").font(.callout)
+        }
+    }
+
+    /// 来源标识：AI 判定 → "AI"；非 AI 且非空闲（如超时回落帧）→ "复用"；空闲段不标（level 徽章已表明）
+    @ViewBuilder
+    private func sourceBadge(_ r: AnalysisRecord) -> some View {
+        if r.fromAI {
+            badge(Text("AI"), tint: .blue)
+        } else if r.level != .idle {
+            badge(Text("复用"), tint: .gray)
+        }
+    }
+
+    private func badge(_ text: Text, tint: Color) -> some View {
+        text
+            .font(.caption2.bold())
+            .padding(.horizontal, 5).padding(.vertical, 1)
+            .background(tint.opacity(0.15))
+            .clipShape(.capsule)
     }
 
     private func screenshotURL(_ relativePath: String?) -> URL? {

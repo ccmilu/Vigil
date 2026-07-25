@@ -23,6 +23,17 @@
         }
       }
     },
+    "(无键鼠操作，标记为空闲)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(no keyboard/mouse input, marked idle)"
+          }
+        }
+      }
+    },
     "（这一版本暂无更新说明）" : {
       "localizations" : {
         "en" : {
