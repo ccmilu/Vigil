@@ -118,7 +118,7 @@ final class IslandGeometryEdgeTests: XCTestCase {
     /// minExpandedWidthNoNotch=440）：
     /// - 有刘海折叠宽 = 20+16+(220+8)+18+20 = 302
     /// - 有刘海展开宽 = 220+2×110 = 440
-    /// - 无刘海折叠宽 = 20+16+8+18+20 = 82
+    /// - 无刘海折叠宽 = 20+16+(220+8)+18+20 = 302（虚拟刘海 220，与有刘海同宽）
     /// - 无刘海展开宽 = max(2×110+8, 440) = 440（228 低于下限，被 minExpandedWidthNoNotch 抬起）
     func testNotchStyleConstantAnchors() {
         guard NotchStyle.autoDetect else { return }
@@ -131,8 +131,8 @@ final class IslandGeometryEdgeTests: XCTestCase {
         XCTAssertEqual(notchGeo.collapsed.height, 24, accuracy: 0.01)
 
         let compactGeo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
-        XCTAssertEqual(compactGeo.collapsed.width, 82, accuracy: 0.01,
-                       "锚点 fail = 常量改动：无刘海折叠宽 82 = 20+16+8+18+20")
+        XCTAssertEqual(compactGeo.collapsed.width, 302, accuracy: 0.01,
+                       "锚点 fail = 常量改动：无刘海折叠宽 302 = 20+16+(220+8)+18+20（虚拟刘海）")
         XCTAssertEqual(compactGeo.expanded.width, 440, accuracy: 0.01,
                        "锚点 fail = 常量改动：无刘海展开宽 440 = max(2×110+8, 440)，下限生效")
         XCTAssertEqual(compactGeo.expanded.height, 150, accuracy: 0.01,

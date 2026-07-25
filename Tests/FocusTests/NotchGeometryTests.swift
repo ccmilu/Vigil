@@ -66,8 +66,9 @@ final class NotchGeometryTests: XCTestCase {
                      + (ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra)
                      + NotchStyle.progressRingSize + sidePad
         } else {
+            // 无刘海主屏：折叠态与有刘海同公式（ScreenMetrics.notchWidth 无刘海回退 220 当虚拟刘海）
             expected = sidePad + NotchStyle.levelIconSize
-                     + NotchStyle.collapsedCompactGap
+                     + (ScreenMetrics.notchWidth + NotchStyle.collapsedMiddleExtra)
                      + NotchStyle.progressRingSize + sidePad
         }
         XCTAssertEqual(geo.collapsed.width, expected, accuracy: 0.01,
@@ -141,16 +142,16 @@ final class NotchGeometryTests: XCTestCase {
 
     // MARK: - 无刘海屏：compute(hasNotch:false) 紧凑公式（多显示器改造新增）
 
-    /// 无刘海折叠态宽 = sidePad×2 + levelIconSize + compactGap + progressRingSize
+    /// 无刘海折叠态宽 = 与有刘海同公式（notchWidth 走 220 回退当虚拟刘海，两屏同宽 302）
     func testNoNotchCollapsedWidthFormula() {
         guard NotchStyle.autoDetect else { return }
         let geo = IslandGeometry.compute(hasNotch: false, notchWidth: 220, menuBarHeight: 24)
         let sidePad = max(NotchStyle.topCornerRadius, NotchStyle.bottomCornerRadius) + 6
         let expected = sidePad + NotchStyle.levelIconSize
-                     + NotchStyle.collapsedCompactGap
+                     + (220 + NotchStyle.collapsedMiddleExtra)
                      + NotchStyle.progressRingSize + sidePad
         XCTAssertEqual(geo.collapsed.width, expected, accuracy: 0.01,
-                       "无刘海折叠态宽度公式：sidePad×2 + icon + compactGap + ring")
+                       "无刘海折叠态宽度公式：sidePad×2 + icon + (虚拟刘海220+extra) + ring = 302")
         XCTAssertFalse(geo.hasNotch, "hasNotch 字段应原样保留入参")
     }
 

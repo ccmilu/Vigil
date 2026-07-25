@@ -22,8 +22,9 @@ enum NotchStyle {
     /// 例如：刘海 220 + extension 110 → 岛总宽 440。
     static let expandedSideExtension: CGFloat = 110
 
-    /// 无刘海屏的紧凑间距：折叠态图标与圆环之间、展开态左右凹陷区之间的固定间距。
-    /// 有刘海屏不用它——那里的"间距"是物理刘海宽度（+ collapsedMiddleExtra）。
+    /// 无刘海屏的紧凑间距：展开态宽度公式与展开态顶行中段下限用。
+    /// 折叠态不用它——折叠态中段是"虚拟刘海"（notchWidth 回退 220 + collapsedMiddleExtra）；
+    /// 有刘海屏更不用——那里的"间距"是物理刘海宽度。
     static let collapsedCompactGap: CGFloat = 8
 
     /// 无刘海屏展开态宽度下限。
@@ -117,8 +118,9 @@ extension IslandGeometry {
     /// 纯函数工厂——不读 NSScreen，CI 可测。
     ///
     /// 有刘海分支公式与改版前 `NotchTimer.islandGeometry` 逐项相等（硬要求，
-    /// NotchGeometryTests 原样通过即证据）；无刘海分支是新增的紧凑几何：
-    /// - 折叠态宽 = sidePad + icon + compactGap + ring + sidePad（不留假刘海区）
+    /// NotchGeometryTests 原样通过即证据）；无刘海分支：
+    /// - 折叠态宽 = 与有刘海同公式（notchWidth 走 220 回退当"虚拟刘海"，302pt）
+    ///   ——早期版本用 82pt 紧凑胶囊，宽屏上过于局促（用户真机反馈）
     /// - 展开态宽 = max(2×expandedSideExtension + compactGap, minExpandedWidthNoNotch)
     ///   ——紧凑公式只有 228pt 会截断 promise/reasoning，用下限 440 锚住展开宽度
     static func compute(hasNotch: Bool, notchWidth: CGFloat, menuBarHeight: CGFloat) -> IslandGeometry {
@@ -137,9 +139,10 @@ extension IslandGeometry {
                 // 展开态：物理刘海宽 + 两侧各扩展 expandedSideExtension（与旧实现逐项相等）
                 expandedW = notchWidth + 2 * NotchStyle.expandedSideExtension
             } else {
-                // 无刘海屏：中段仅留紧凑固定间距
+                // 无刘海屏：折叠态与有刘海同公式——notchWidth 走 220 回退当"虚拟刘海"，
+                // 两屏折叠态同宽（302），跨屏视觉一致（82 紧凑胶囊在宽屏上过于局促）
                 collapsedW = sidePad + NotchStyle.levelIconSize
-                           + NotchStyle.collapsedCompactGap
+                           + (notchWidth + NotchStyle.collapsedMiddleExtra)
                            + NotchStyle.progressRingSize + sidePad
                 // 展开态：紧凑公式（228）失去刘海占位这个宽度锚点，
                 // 用 minExpandedWidthNoNotch（440，对齐有刘海典型宽）兜底，避免内容截断
