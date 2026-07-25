@@ -46,3 +46,7 @@ docs/*
 !docs/screenshots/
 App/Info.plist
 scripts/
+
+# ralph 开发流程产物（不入库）
+GUARDRAILS.md
+PROGRESS.md
